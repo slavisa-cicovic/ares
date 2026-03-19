@@ -28,6 +28,7 @@ import com.sc.ares.features.auth.entity.UserRole;
 import com.sc.ares.features.auth.repository.RefreshTokenRepository;
 import com.sc.ares.features.auth.repository.RoleRepository;
 import com.sc.ares.features.auth.repository.UserRoleRepository;
+import com.sc.ares.features.client.repository.ClientRepository;
 import com.sc.ares.features.company.entity.Company;
 import com.sc.ares.features.company.entity.CompanyStatus;
 import com.sc.ares.features.company.repository.CompanyRepository;
@@ -63,6 +64,9 @@ class AuthLoginIntegrationTests {
     private RefreshTokenRepository refreshTokenRepository;
 
     @Autowired
+    private ClientRepository clientRepository;
+
+    @Autowired
     private PasswordEncoder passwordEncoder;
 
     private Company activeCompany;
@@ -74,6 +78,7 @@ class AuthLoginIntegrationTests {
     void setUp() {
         refreshTokenRepository.deleteAll();
         userRoleRepository.deleteAll();
+        clientRepository.deleteAll();
         userRepository.deleteAll();
         roleRepository.deleteAll();
         companyRepository.deleteAll();
