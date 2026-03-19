@@ -32,7 +32,7 @@ public class AresAccessDeniedHandler implements AccessDeniedHandler {
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
 
         ApiErrorResponse errorResponse = new ApiErrorResponse(
-            Instant.now(),
+            Instant.now().toString(),
             HttpStatus.FORBIDDEN.value(),
             HttpStatus.FORBIDDEN.getReasonPhrase(),
             "Access denied.",

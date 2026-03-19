@@ -82,7 +82,7 @@ public class GlobalExceptionHandler {
     ) {
         return ResponseEntity.status(status).body(
             new ApiErrorResponse(
-                Instant.now(),
+                Instant.now().toString(),
                 status.value(),
                 status.getReasonPhrase(),
                 message,

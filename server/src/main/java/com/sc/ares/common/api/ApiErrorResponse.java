@@ -3,7 +3,7 @@ package com.sc.ares.common.api;
 import java.time.Instant;
 
 public record ApiErrorResponse(
-    Instant timestamp,
+    String timestamp,
     int status,
     String error,
     String message,

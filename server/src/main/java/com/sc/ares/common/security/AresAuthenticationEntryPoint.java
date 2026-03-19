@@ -32,7 +32,7 @@ public class AresAuthenticationEntryPoint implements AuthenticationEntryPoint {
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
 
         ApiErrorResponse errorResponse = new ApiErrorResponse(
-            Instant.now(),
+            Instant.now().toString(),
             HttpStatus.UNAUTHORIZED.value(),
             HttpStatus.UNAUTHORIZED.getReasonPhrase(),
             "Authentication is required.",

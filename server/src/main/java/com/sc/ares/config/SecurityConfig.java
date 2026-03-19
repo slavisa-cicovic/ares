@@ -34,7 +34,7 @@ public class SecurityConfig {
                 .accessDeniedHandler(accessDeniedHandler)
             )
             .authorizeHttpRequests(authorize -> authorize
-                .requestMatchers("/api/public/health").permitAll()
+                .requestMatchers("/public/health").permitAll()
                 .anyRequest().authenticated()
             );
 
