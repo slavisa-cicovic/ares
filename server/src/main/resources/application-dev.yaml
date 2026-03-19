@@ -1,0 +1,14 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://${ARES_DB_HOST:localhost}:${ARES_DB_PORT:5432}/${ARES_DB_NAME:ares}
+    username: ${ARES_DB_USERNAME:ares}
+    password: ${ARES_DB_PASSWORD:ares_local_password}
+  jpa:
+    show-sql: false
+  flyway:
+    default-schema: public
+
+logging:
+  level:
+    root: INFO
+    org.springframework.jdbc.core: INFO

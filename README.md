@@ -16,3 +16,30 @@ Core architecture direction:
 
 The old `minifakt` project is reference material only.
 Implementation in this repository is treated as new source.
+
+## Local PostgreSQL
+
+Local backend development uses PostgreSQL in Docker.
+
+1. Create a local env file:
+
+```bash
+cp .env.example .env
+```
+
+2. Start PostgreSQL:
+
+```bash
+docker compose up -d
+```
+
+3. Run the Spring Boot server from `server`.
+
+The backend reads local DB settings from:
+- `ARES_DB_HOST`
+- `ARES_DB_PORT`
+- `ARES_DB_NAME`
+- `ARES_DB_USERNAME`
+- `ARES_DB_PASSWORD`
+
+To reset local database state completely, stop the containers and remove the Docker volume used by PostgreSQL.

@@ -1,0 +1,20 @@
+services:
+  postgres:
+    image: postgres:17
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${ARES_DB_NAME:-ares}
+      POSTGRES_USER: ${ARES_DB_USERNAME:-ares}
+      POSTGRES_PASSWORD: ${ARES_DB_PASSWORD:-ares_local_password}
+    ports:
+      - "${ARES_DB_PORT:-5432}:5432"
+    volumes:
+      - ares-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${ARES_DB_USERNAME:-ares} -d ${ARES_DB_NAME:-ares}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  ares-postgres-data:
