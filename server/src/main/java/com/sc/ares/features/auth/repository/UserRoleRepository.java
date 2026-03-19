@@ -17,4 +17,14 @@ public interface UserRoleRepository extends JpaRepository<UserRole, UUID> {
         where userRole.user.id = :userId
         """)
     List<UserRole> findAllByUserId(UUID userId);
+
+    @Query("""
+        select userRole
+        from UserRole userRole
+        join fetch userRole.role
+        where userRole.user.id in :userIds
+        """)
+    List<UserRole> findAllByUserIdIn(List<UUID> userIds);
+
+    void deleteByUserId(UUID userId);
 }

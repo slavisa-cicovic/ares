@@ -71,6 +71,11 @@ public class Company {
         this.updatedAt = Instant.now();
     }
 
+    public void updateName(String name) {
+        this.name = name;
+        this.updatedAt = Instant.now();
+    }
+
     public void softDelete() {
         Instant now = Instant.now();
         this.deletedAt = now;

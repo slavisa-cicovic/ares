@@ -110,7 +110,24 @@ public class AppUser {
         return deletedAt;
     }
 
+    public Instant getCreatedAt() {
+        return createdAt;
+    }
+
     public void updateStatus(UserStatus status) {
+        this.status = status;
+        this.updatedAt = Instant.now();
+    }
+
+    public void updateIdentity(
+        String email,
+        String firstName,
+        String lastName,
+        UserStatus status
+    ) {
+        this.email = email;
+        this.firstName = firstName;
+        this.lastName = lastName;
         this.status = status;
         this.updatedAt = Instant.now();
     }
