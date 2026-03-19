@@ -294,6 +294,90 @@ class InvoiceModuleIntegrationTests {
     }
 
     @Test
+    void companyAdminShouldIssueOwnDraftInvoice() throws Exception {
+        String token = login("admin.one@local.ares", "ares-test").get("accessToken").asText();
+        JsonNode createdInvoice = createInvoice(token, companyOneClient.getId(), companyOneItem.getId());
+
+        mockMvc.perform(
+                post("/invoices/{invoiceId}/issue", createdInvoice.get("id").asText())
+                    .header("Authorization", bearer(token))
+            )
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.status").value("ISSUED"));
+
+        UUID invoiceId = UUID.fromString(createdInvoice.get("id").asText());
+        org.assertj.core.api.Assertions.assertThat(
+            invoiceRepository.findById(invoiceId).orElseThrow().getIssuedAt()
+        ).isNotNull();
+    }
+
+    @Test
+    void regularUserShouldNotIssueInvoice() throws Exception {
+        String adminToken = login("admin.one@local.ares", "ares-test").get("accessToken").asText();
+        String userToken = login("user.one@local.ares", "ares-test").get("accessToken").asText();
+        JsonNode createdInvoice = createInvoice(adminToken, companyOneClient.getId(), companyOneItem.getId());
+
+        mockMvc.perform(
+                post("/invoices/{invoiceId}/issue", createdInvoice.get("id").asText())
+                    .header("Authorization", bearer(userToken))
+            )
+            .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void crossTenantIssueShouldReturnNotFound() throws Exception {
+        String tokenOne = login("admin.one@local.ares", "ares-test").get("accessToken").asText();
+        String tokenTwo = login("admin.two@local.ares", "ares-test").get("accessToken").asText();
+        JsonNode createdInvoice = createInvoice(tokenTwo, companyTwoClient.getId(), companyTwoItem.getId());
+
+        mockMvc.perform(
+                post("/invoices/{invoiceId}/issue", createdInvoice.get("id").asText())
+                    .header("Authorization", bearer(tokenOne))
+            )
+            .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void issuedInvoiceShouldNotBeUpdated() throws Exception {
+        String token = login("admin.one@local.ares", "ares-test").get("accessToken").asText();
+        JsonNode createdInvoice = createInvoice(token, companyOneClient.getId(), companyOneItem.getId());
+
+        mockMvc.perform(
+                post("/invoices/{invoiceId}/issue", createdInvoice.get("id").asText())
+                    .header("Authorization", bearer(token))
+            )
+            .andExpect(status().isOk());
+
+        mockMvc.perform(
+                put("/invoices/{invoiceId}", createdInvoice.get("id").asText())
+                    .header("Authorization", bearer(token))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(updatedInvoicePayload(companyOneClient.getId(), companyOneItem.getId()))
+            )
+            .andExpect(status().isConflict())
+            .andExpect(jsonPath("$.message").value("Issued invoice cannot be modified."));
+    }
+
+    @Test
+    void repeatedIssueShouldReturnConflict() throws Exception {
+        String token = login("admin.one@local.ares", "ares-test").get("accessToken").asText();
+        JsonNode createdInvoice = createInvoice(token, companyOneClient.getId(), companyOneItem.getId());
+
+        mockMvc.perform(
+                post("/invoices/{invoiceId}/issue", createdInvoice.get("id").asText())
+                    .header("Authorization", bearer(token))
+            )
+            .andExpect(status().isOk());
+
+        mockMvc.perform(
+                post("/invoices/{invoiceId}/issue", createdInvoice.get("id").asText())
+                    .header("Authorization", bearer(token))
+            )
+            .andExpect(status().isConflict())
+            .andExpect(jsonPath("$.message").value("Issued invoice cannot be modified."));
+    }
+
+    @Test
     void invalidPayloadShouldReturnBadRequest() throws Exception {
         String token = login("admin.one@local.ares", "ares-test").get("accessToken").asText();
 

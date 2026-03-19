@@ -1,6 +1,7 @@
 package com.sc.ares.features.invoice.service;
 
 import com.sc.ares.common.api.ApiBadRequestException;
+import com.sc.ares.common.api.BusinessConflictException;
 import com.sc.ares.common.api.PagedResponse;
 import com.sc.ares.common.api.ResourceNotFoundException;
 import com.sc.ares.features.client.entity.Client;
@@ -138,6 +139,7 @@ public class InvoiceService {
     public InvoiceResponse updateInvoice(UUID invoiceId, UpsertInvoiceRequest request) {
         UUID companyId = invoiceAccessService.getRequiredWritableCompanyId();
         Invoice invoice = getRequiredInvoice(invoiceId, companyId);
+        ensureDraft(invoice);
 
         validateDates(request.issueDate(), request.dueDate());
         Client client = getRequiredClient(request.clientId(), companyId);
@@ -158,6 +160,17 @@ public class InvoiceService {
         return toResponse(invoiceRepository.save(invoice));
     }
 
+    @Transactional
+    public InvoiceResponse issueInvoice(UUID invoiceId) {
+        UUID companyId = invoiceAccessService.getRequiredWritableCompanyId();
+        Invoice invoice = getRequiredInvoice(invoiceId, companyId);
+        ensureDraft(invoice);
+
+        invoice.issue();
+
+        return toResponse(invoiceRepository.save(invoice));
+    }
+
     private Company getWritableCompany() {
         UUID companyId = invoiceAccessService.getRequiredWritableCompanyId();
         return companyRepository.findByIdAndDeletedAtIsNull(companyId)
@@ -167,6 +180,12 @@ public class InvoiceService {
     private Invoice getRequiredInvoice(UUID invoiceId, UUID companyId) {
         return invoiceRepository.findByIdAndCompanyIdAndDeletedAtIsNull(invoiceId, companyId)
             .orElseThrow(() -> new ResourceNotFoundException("Invoice not found."));
+    }
+
+    private void ensureDraft(Invoice invoice) {
+        if (invoice.getStatus() != InvoiceStatus.DRAFT) {
+            throw new BusinessConflictException("Issued invoice cannot be modified.");
+        }
     }
 
     private Client getRequiredClient(UUID clientId, UUID companyId) {

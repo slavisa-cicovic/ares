@@ -50,6 +50,11 @@ public class InvoiceController {
         return invoiceService.createInvoice(request);
     }
 
+    @PostMapping("/{invoiceId}/issue")
+    public InvoiceResponse issueInvoice(@PathVariable UUID invoiceId) {
+        return invoiceService.issueInvoice(invoiceId);
+    }
+
     @PutMapping("/{invoiceId}")
     public InvoiceResponse updateInvoice(@PathVariable UUID invoiceId, @Valid @RequestBody UpsertInvoiceRequest request) {
         return invoiceService.updateInvoice(invoiceId, request);

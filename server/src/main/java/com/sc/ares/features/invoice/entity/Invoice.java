@@ -75,6 +75,9 @@ public class Invoice {
     @Column(name = "deleted_at")
     private Instant deletedAt;
 
+    @Column(name = "issued_at")
+    private Instant issuedAt;
+
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
@@ -175,6 +178,10 @@ public class Invoice {
         return total;
     }
 
+    public Instant getIssuedAt() {
+        return issuedAt;
+    }
+
     public List<InvoiceLine> getLines() {
         return lines;
     }
@@ -198,6 +205,13 @@ public class Invoice {
         this.taxTotal = taxTotal;
         this.total = total;
         this.updatedAt = Instant.now();
+    }
+
+    public void issue() {
+        Instant now = Instant.now();
+        this.status = InvoiceStatus.ISSUED;
+        this.issuedAt = now;
+        this.updatedAt = now;
     }
 
     public void replaceLines(List<InvoiceLine> newLines) {
