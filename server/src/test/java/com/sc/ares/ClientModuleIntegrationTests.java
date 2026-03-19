@@ -21,6 +21,7 @@ import com.sc.ares.features.client.repository.ClientRepository;
 import com.sc.ares.features.company.entity.Company;
 import com.sc.ares.features.company.entity.CompanyStatus;
 import com.sc.ares.features.company.repository.CompanyRepository;
+import com.sc.ares.features.invoice.repository.InvoiceRepository;
 import com.sc.ares.features.item.repository.ItemRepository;
 import com.sc.ares.features.user.entity.AppUser;
 import com.sc.ares.features.user.entity.UserStatus;
@@ -69,6 +70,9 @@ class ClientModuleIntegrationTests {
     private ClientRepository clientRepository;
 
     @Autowired
+    private InvoiceRepository invoiceRepository;
+
+    @Autowired
     private ItemRepository itemRepository;
 
     @Autowired
@@ -83,6 +87,7 @@ class ClientModuleIntegrationTests {
     void setUp() {
         refreshTokenRepository.deleteAll();
         userRoleRepository.deleteAll();
+        invoiceRepository.deleteAll();
         clientRepository.deleteAll();
         itemRepository.deleteAll();
         userRepository.deleteAll();

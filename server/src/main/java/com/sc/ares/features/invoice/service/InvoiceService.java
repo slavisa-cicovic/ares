@@ -1,0 +1,418 @@
+package com.sc.ares.features.invoice.service;
+
+import com.sc.ares.common.api.ApiBadRequestException;
+import com.sc.ares.common.api.PagedResponse;
+import com.sc.ares.common.api.ResourceNotFoundException;
+import com.sc.ares.features.client.entity.Client;
+import com.sc.ares.features.client.repository.ClientRepository;
+import com.sc.ares.features.company.entity.Company;
+import com.sc.ares.features.company.repository.CompanyRepository;
+import com.sc.ares.features.invoice.dto.InvoiceLineResponse;
+import com.sc.ares.features.invoice.dto.InvoiceResponse;
+import com.sc.ares.features.invoice.dto.InvoiceSummaryResponse;
+import com.sc.ares.features.invoice.dto.UpsertInvoiceLineRequest;
+import com.sc.ares.features.invoice.dto.UpsertInvoiceRequest;
+import com.sc.ares.features.invoice.entity.Invoice;
+import com.sc.ares.features.invoice.entity.InvoiceLine;
+import com.sc.ares.features.invoice.entity.InvoiceStatus;
+import com.sc.ares.features.invoice.repository.InvoiceRepository;
+import com.sc.ares.features.item.entity.Item;
+import com.sc.ares.features.item.repository.ItemRepository;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+@Service
+public class InvoiceService {
+
+    private static final int DEFAULT_PAGE_SIZE = 20;
+    private static final int MAX_PAGE_SIZE = 100;
+    private static final BigDecimal ONE_HUNDRED = new BigDecimal("100.00");
+    private static final Map<String, String> SORT_FIELD_MAPPING = Map.of(
+        "invoiceNumber", "invoiceNumber",
+        "issueDate", "issueDate",
+        "dueDate", "dueDate",
+        "total", "total",
+        "createdAt", "createdAt"
+    );
+
+    private final InvoiceRepository invoiceRepository;
+    private final CompanyRepository companyRepository;
+    private final ClientRepository clientRepository;
+    private final ItemRepository itemRepository;
+    private final InvoiceAccessService invoiceAccessService;
+
+    public InvoiceService(
+        InvoiceRepository invoiceRepository,
+        CompanyRepository companyRepository,
+        ClientRepository clientRepository,
+        ItemRepository itemRepository,
+        InvoiceAccessService invoiceAccessService
+    ) {
+        this.invoiceRepository = invoiceRepository;
+        this.companyRepository = companyRepository;
+        this.clientRepository = clientRepository;
+        this.itemRepository = itemRepository;
+        this.invoiceAccessService = invoiceAccessService;
+    }
+
+    @Transactional(readOnly = true)
+    public PagedResponse<InvoiceSummaryResponse> listInvoices(
+        int page,
+        int size,
+        String sort,
+        String status,
+        String search
+    ) {
+        UUID companyId = invoiceAccessService.getRequiredReadableCompanyId();
+        PageRequest pageRequest = PageRequest.of(
+            normalizePage(page),
+            normalizeSize(size),
+            parseSort(sort)
+        );
+
+        Page<Invoice> resultPage = invoiceRepository.findPageByCompanyIdAndFilters(
+            companyId,
+            parseOptionalStatus(status),
+            normalizeSearch(search),
+            pageRequest
+        );
+
+        return new PagedResponse<>(
+            resultPage.getContent().stream().map(this::toSummaryResponse).toList(),
+            resultPage.getNumber(),
+            resultPage.getSize(),
+            resultPage.getTotalElements(),
+            resultPage.getTotalPages()
+        );
+    }
+
+    @Transactional(readOnly = true)
+    public InvoiceResponse getInvoice(UUID invoiceId) {
+        UUID companyId = invoiceAccessService.getRequiredReadableCompanyId();
+        return toResponse(getRequiredInvoice(invoiceId, companyId));
+    }
+
+    @Transactional
+    public InvoiceResponse createInvoice(UpsertInvoiceRequest request) {
+        Company company = getWritableCompany();
+        validateDates(request.issueDate(), request.dueDate());
+        Client client = getRequiredClient(request.clientId(), company.getId());
+        InvoiceDraft draft = buildDraft(request.lines(), company.getId());
+
+        int sequenceYear = request.issueDate().getYear();
+        int nextSequenceNumber = invoiceRepository.findFirstByCompanyIdAndSequenceYearOrderBySequenceNumberDesc(
+            company.getId(),
+            sequenceYear
+        ).map(invoice -> invoice.getSequenceNumber() + 1).orElse(1);
+
+        Invoice invoice = Invoice.create(
+            company,
+            client,
+            formatInvoiceNumber(sequenceYear, nextSequenceNumber),
+            sequenceYear,
+            nextSequenceNumber,
+            request.issueDate(),
+            request.dueDate(),
+            normalizeCurrency(request.currency()),
+            normalizeOptional(request.note()),
+            draft.subtotal(),
+            draft.taxTotal(),
+            draft.total()
+        );
+        invoice.replaceLines(draft.lines());
+
+        return toResponse(invoiceRepository.save(invoice));
+    }
+
+    @Transactional
+    public InvoiceResponse updateInvoice(UUID invoiceId, UpsertInvoiceRequest request) {
+        UUID companyId = invoiceAccessService.getRequiredWritableCompanyId();
+        Invoice invoice = getRequiredInvoice(invoiceId, companyId);
+
+        validateDates(request.issueDate(), request.dueDate());
+        Client client = getRequiredClient(request.clientId(), companyId);
+        InvoiceDraft draft = buildDraft(request.lines(), companyId);
+
+        invoice.updateDraft(
+            client,
+            request.issueDate(),
+            request.dueDate(),
+            normalizeCurrency(request.currency()),
+            normalizeOptional(request.note()),
+            draft.subtotal(),
+            draft.taxTotal(),
+            draft.total()
+        );
+        invoice.replaceLines(draft.lines());
+
+        return toResponse(invoiceRepository.save(invoice));
+    }
+
+    private Company getWritableCompany() {
+        UUID companyId = invoiceAccessService.getRequiredWritableCompanyId();
+        return companyRepository.findByIdAndDeletedAtIsNull(companyId)
+            .orElseThrow(() -> new ResourceNotFoundException("Company not found."));
+    }
+
+    private Invoice getRequiredInvoice(UUID invoiceId, UUID companyId) {
+        return invoiceRepository.findByIdAndCompanyIdAndDeletedAtIsNull(invoiceId, companyId)
+            .orElseThrow(() -> new ResourceNotFoundException("Invoice not found."));
+    }
+
+    private Client getRequiredClient(UUID clientId, UUID companyId) {
+        return clientRepository.findByIdAndCompanyIdAndDeletedAtIsNull(clientId, companyId)
+            .orElseThrow(() -> new ResourceNotFoundException("Client not found."));
+    }
+
+    private InvoiceDraft buildDraft(List<UpsertInvoiceLineRequest> lineRequests, UUID companyId) {
+        if (lineRequests == null || lineRequests.isEmpty()) {
+            throw new ApiBadRequestException("At least one invoice line is required.");
+        }
+
+        List<InvoiceLine> lines = new ArrayList<>();
+        BigDecimal subtotal = money(BigDecimal.ZERO);
+        BigDecimal taxTotal = money(BigDecimal.ZERO);
+        BigDecimal total = money(BigDecimal.ZERO);
+
+        for (int index = 0; index < lineRequests.size(); index++) {
+            UpsertInvoiceLineRequest request = lineRequests.get(index);
+            Item item = resolveOptionalItem(request.itemId(), companyId);
+
+            String itemName = normalizeRequired(request.itemName(), "Required invoice line field is missing.");
+            String itemCode = normalizeOptional(request.itemCode());
+            String unit = normalizeRequired(request.unit(), "Required invoice line field is missing.");
+            BigDecimal quantity = normalizeQuantity(request.quantity());
+            BigDecimal unitPrice = normalizeMoney(request.unitPrice(), "Required invoice line field is missing.");
+            BigDecimal taxRate = normalizeTaxRate(request.taxRate());
+
+            if (itemCode == null && item != null) {
+                itemCode = item.getCode();
+            }
+
+            BigDecimal lineSubtotal = money(quantity.multiply(unitPrice));
+            BigDecimal lineTaxTotal = money(lineSubtotal.multiply(taxRate).divide(ONE_HUNDRED, 2, RoundingMode.HALF_UP));
+            BigDecimal lineTotal = money(lineSubtotal.add(lineTaxTotal));
+
+            subtotal = money(subtotal.add(lineSubtotal));
+            taxTotal = money(taxTotal.add(lineTaxTotal));
+            total = money(total.add(lineTotal));
+
+            lines.add(InvoiceLine.create(
+                item,
+                index + 1,
+                itemName,
+                itemCode,
+                unit,
+                quantity,
+                unitPrice,
+                taxRate,
+                lineSubtotal,
+                lineTaxTotal,
+                lineTotal
+            ));
+        }
+
+        return new InvoiceDraft(lines, subtotal, taxTotal, total);
+    }
+
+    private Item resolveOptionalItem(UUID itemId, UUID companyId) {
+        if (itemId == null) {
+            return null;
+        }
+
+        return itemRepository.findByIdAndCompanyIdAndDeletedAtIsNull(itemId, companyId)
+            .orElseThrow(() -> new ResourceNotFoundException("Item not found."));
+    }
+
+    private InvoiceSummaryResponse toSummaryResponse(Invoice invoice) {
+        return new InvoiceSummaryResponse(
+            invoice.getId(),
+            invoice.getInvoiceNumber(),
+            invoice.getClient().getId(),
+            invoice.getClient().getName(),
+            invoice.getIssueDate(),
+            invoice.getDueDate(),
+            invoice.getCurrency(),
+            invoice.getStatus().name(),
+            invoice.getSubtotal(),
+            invoice.getTaxTotal(),
+            invoice.getTotal()
+        );
+    }
+
+    private InvoiceResponse toResponse(Invoice invoice) {
+        return new InvoiceResponse(
+            invoice.getId(),
+            invoice.getInvoiceNumber(),
+            invoice.getClient().getId(),
+            invoice.getClient().getName(),
+            invoice.getIssueDate(),
+            invoice.getDueDate(),
+            invoice.getCurrency(),
+            invoice.getStatus().name(),
+            invoice.getNote(),
+            invoice.getSubtotal(),
+            invoice.getTaxTotal(),
+            invoice.getTotal(),
+            invoice.getLines().stream().map(this::toLineResponse).toList()
+        );
+    }
+
+    private InvoiceLineResponse toLineResponse(InvoiceLine line) {
+        return new InvoiceLineResponse(
+            line.getId(),
+            line.getLineNumber(),
+            line.getItem() != null ? line.getItem().getId() : null,
+            line.getItemName(),
+            line.getItemCode(),
+            line.getUnit(),
+            line.getQuantity(),
+            line.getUnitPrice(),
+            line.getTaxRate(),
+            line.getLineSubtotal(),
+            line.getLineTaxTotal(),
+            line.getLineTotal()
+        );
+    }
+
+    private int normalizePage(int page) {
+        return Math.max(page, 0);
+    }
+
+    private int normalizeSize(int size) {
+        if (size <= 0) {
+            return DEFAULT_PAGE_SIZE;
+        }
+
+        return Math.min(size, MAX_PAGE_SIZE);
+    }
+
+    private Sort parseSort(String sort) {
+        String requestedSort = sort == null || sort.isBlank() ? "issueDate,desc" : sort.trim();
+        String[] parts = requestedSort.split(",", 2);
+        String field = parts[0].trim();
+        String mappedField = SORT_FIELD_MAPPING.get(field);
+
+        if (mappedField == null) {
+            throw new ApiBadRequestException("Invalid sort field.");
+        }
+
+        Sort.Direction direction = Sort.Direction.ASC;
+
+        if (parts.length == 2) {
+            try {
+                direction = Sort.Direction.fromString(parts[1].trim());
+            } catch (IllegalArgumentException exception) {
+                throw new ApiBadRequestException("Invalid sort direction.");
+            }
+        }
+
+        return Sort.by(direction, mappedField);
+    }
+
+    private InvoiceStatus parseOptionalStatus(String status) {
+        if (status == null || status.isBlank()) {
+            return null;
+        }
+
+        try {
+            return InvoiceStatus.valueOf(status.trim().toUpperCase());
+        } catch (IllegalArgumentException exception) {
+            throw new ApiBadRequestException("Invalid invoice status.");
+        }
+    }
+
+    private String normalizeSearch(String search) {
+        return normalizeOptional(search);
+    }
+
+    private String normalizeCurrency(String currency) {
+        String normalized = normalizeRequired(currency, "Required invoice field is missing.");
+        return normalized.toUpperCase();
+    }
+
+    private String normalizeRequired(String value, String message) {
+        String normalized = normalizeOptional(value);
+
+        if (normalized == null) {
+            throw new ApiBadRequestException(message);
+        }
+
+        return normalized;
+    }
+
+    private String normalizeOptional(String value) {
+        if (value == null) {
+            return null;
+        }
+
+        String normalized = value.trim();
+        return normalized.isEmpty() ? null : normalized;
+    }
+
+    private void validateDates(LocalDate issueDate, LocalDate dueDate) {
+        if (dueDate.isBefore(issueDate)) {
+            throw new ApiBadRequestException("Due date must not be before issue date.");
+        }
+    }
+
+    private BigDecimal normalizeQuantity(BigDecimal value) {
+        if (value == null) {
+            throw new ApiBadRequestException("Required invoice line field is missing.");
+        }
+
+        if (value.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new ApiBadRequestException("Invoice line quantity must be positive.");
+        }
+
+        return value;
+    }
+
+    private BigDecimal normalizeMoney(BigDecimal value, String message) {
+        if (value == null) {
+            throw new ApiBadRequestException(message);
+        }
+
+        if (value.compareTo(BigDecimal.ZERO) < 0) {
+            throw new ApiBadRequestException("Invoice monetary values must not be negative.");
+        }
+
+        return money(value);
+    }
+
+    private BigDecimal normalizeTaxRate(BigDecimal value) {
+        BigDecimal normalized = normalizeMoney(value, "Required invoice line field is missing.");
+
+        if (normalized.compareTo(ONE_HUNDRED) > 0) {
+            throw new ApiBadRequestException("Invalid tax rate.");
+        }
+
+        return normalized;
+    }
+
+    private BigDecimal money(BigDecimal value) {
+        return value.setScale(2, RoundingMode.HALF_UP);
+    }
+
+    private String formatInvoiceNumber(int year, int sequenceNumber) {
+        return year + "-" + String.format("%04d", sequenceNumber);
+    }
+
+    private record InvoiceDraft(
+        List<InvoiceLine> lines,
+        BigDecimal subtotal,
+        BigDecimal taxTotal,
+        BigDecimal total
+    ) {
+    }
+}
