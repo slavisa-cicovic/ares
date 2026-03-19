@@ -115,6 +115,10 @@ When using the old `minifakt` project as reference:
 - avoid premature abstraction
 - choose boring, maintainable solutions over clever ones
 - make cross-module boundaries obvious
+- do not use Lombok in JPA entities
+- do not use Lombok in service classes
+- do not use Lombok in configuration classes
+- Lombok is allowed in DTO classes when it clearly improves readability
 
 ## Decision Rules
 - if a rule belongs to the business domain for all clients, it belongs in `server`
