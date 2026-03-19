@@ -1,9 +1,10 @@
 package com.sc.ares.features.auth.service;
 
 import com.sc.ares.common.security.AresAuthenticatedPrincipal;
+import com.sc.ares.common.security.IssuedAccessToken;
 import com.sc.ares.common.security.AresUserDetails;
+import com.sc.ares.features.auth.dto.AuthTokenResponse;
 import com.sc.ares.features.auth.dto.AuthenticatedUserResponse;
-import java.util.List;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -19,9 +20,22 @@ public class AuthResponseFactory {
             userDetails.getLastName(),
             principal.companyId(),
             userDetails.getCompanyName(),
-            List.copyOf(userDetails.getRoleCodes()),
-            principal.platformAdmin(),
-            "BASIC"
+            userDetails.getRoleCodes(),
+            principal.platformAdmin()
+        );
+    }
+
+    public AuthTokenResponse tokenResponse(
+        AresUserDetails userDetails,
+        IssuedAccessToken accessToken,
+        IssuedRefreshToken refreshToken
+    ) {
+        return new AuthTokenResponse(
+            accessToken.token(),
+            refreshToken.token(),
+            accessToken.expiresAt().toString(),
+            refreshToken.expiresAt().toString(),
+            fromUserDetails(userDetails)
         );
     }
 }

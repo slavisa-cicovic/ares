@@ -16,3 +16,10 @@ spring:
 server:
   servlet:
     context-path: /api
+
+ares:
+  auth:
+    issuer: ares
+    access-token-secret: ${ARES_AUTH_ACCESS_TOKEN_SECRET:ares-development-access-token-secret-change-me}
+    access-token-ttl: PT15M
+    refresh-token-ttl: P7D

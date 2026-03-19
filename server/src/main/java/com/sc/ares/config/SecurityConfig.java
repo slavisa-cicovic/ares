@@ -1,5 +1,6 @@
 package com.sc.ares.config;
 
+import com.sc.ares.common.security.AccessTokenAuthenticationFilter;
 import com.sc.ares.common.security.AresAccessDeniedHandler;
 import com.sc.ares.common.security.AresAuthenticationEntryPoint;
 import com.sc.ares.features.auth.service.DatabaseUserDetailsService;
@@ -13,6 +14,7 @@ import org.springframework.security.config.annotation.authentication.configurati
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.SecurityFilterChain;
 
 @Configuration
@@ -23,7 +25,8 @@ public class SecurityConfig {
         HttpSecurity http,
         AresAuthenticationEntryPoint authenticationEntryPoint,
         AresAccessDeniedHandler accessDeniedHandler,
-        DatabaseUserDetailsService userDetailsService
+        DatabaseUserDetailsService userDetailsService,
+        AccessTokenAuthenticationFilter accessTokenAuthenticationFilter
     ) throws Exception {
         http
             .csrf(AbstractHttpConfigurer::disable)
@@ -38,9 +41,12 @@ public class SecurityConfig {
                 .authenticationEntryPoint(authenticationEntryPoint)
                 .accessDeniedHandler(accessDeniedHandler)
             )
+            .addFilterBefore(accessTokenAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
             .authorizeHttpRequests(authorize -> authorize
                 .requestMatchers("/public/health").permitAll()
                 .requestMatchers("/auth/login").permitAll()
+                .requestMatchers("/auth/refresh").permitAll()
+                .requestMatchers("/auth/logout").permitAll()
                 .anyRequest().authenticated()
             );
 

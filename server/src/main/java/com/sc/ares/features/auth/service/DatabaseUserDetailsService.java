@@ -76,6 +76,12 @@ public class DatabaseUserDetailsService implements UserDetailsService {
         return (AresUserDetails) loadUserByUsername(user.getEmail());
     }
 
+    @Transactional(readOnly = true)
+    public AppUser getRequiredUserEntity(java.util.UUID userId) {
+        return userRepository.findByIdAndDeletedAtIsNull(userId)
+            .orElseThrow(() -> new UsernameNotFoundException("User not found."));
+    }
+
     private boolean isLoginEnabled(AppUser user, Company company) {
         return user.getDeletedAt() == null
             && user.getStatus() == UserStatus.ACTIVE

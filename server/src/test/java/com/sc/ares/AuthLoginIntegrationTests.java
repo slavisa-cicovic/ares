@@ -1,9 +1,12 @@
 package com.sc.ares;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.sc.ares.features.auth.entity.RefreshToken;
 import com.sc.ares.features.auth.entity.Role;
 import com.sc.ares.features.auth.entity.RoleScope;
 import com.sc.ares.features.auth.entity.UserRole;
+import com.sc.ares.features.auth.repository.RefreshTokenRepository;
 import com.sc.ares.features.auth.repository.RoleRepository;
 import com.sc.ares.features.auth.repository.UserRoleRepository;
 import com.sc.ares.features.company.entity.Company;
@@ -24,6 +27,7 @@ import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequ
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -55,6 +59,9 @@ class AuthLoginIntegrationTests {
     private UserRoleRepository userRoleRepository;
 
     @Autowired
+    private RefreshTokenRepository refreshTokenRepository;
+
+    @Autowired
     private PasswordEncoder passwordEncoder;
 
     private Company activeCompany;
@@ -64,6 +71,7 @@ class AuthLoginIntegrationTests {
 
     @BeforeEach
     void setUp() {
+        refreshTokenRepository.deleteAll();
         userRoleRepository.deleteAll();
         userRepository.deleteAll();
         roleRepository.deleteAll();
@@ -113,18 +121,19 @@ class AuthLoginIntegrationTests {
     }
 
     @Test
-    void loginShouldReturnAuthenticatedUserPayload() throws Exception {
+    void loginShouldReturnTokenPayload() throws Exception {
         mockMvc.perform(
                 post("/auth/login")
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(loginRequest("admin@local.ares", "ares-test"))
             )
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.email").value("admin@local.ares"))
-            .andExpect(jsonPath("$.companyName").value("Test Company"))
-            .andExpect(jsonPath("$.roles[0]").value("company-admin"))
-            .andExpect(jsonPath("$.platformAdmin").value(false))
-            .andExpect(jsonPath("$.authenticationType").value("BASIC"));
+            .andExpect(jsonPath("$.accessToken").isString())
+            .andExpect(jsonPath("$.refreshToken").isString())
+            .andExpect(jsonPath("$.user.email").value("admin@local.ares"))
+            .andExpect(jsonPath("$.user.companyName").value("Test Company"))
+            .andExpect(jsonPath("$.user.roles[0]").value("company-admin"))
+            .andExpect(jsonPath("$.user.platformAdmin").value(false));
     }
 
     @Test
@@ -176,15 +185,117 @@ class AuthLoginIntegrationTests {
 
     @Test
     void currentUserEndpointShouldReturnIdentityForAuthenticatedUser() throws Exception {
+        JsonNode loginResponse = login("superadmin@local.ares", "ares-test");
+
         mockMvc.perform(
                 get("/auth/me")
-                    .with(SecurityMockMvcRequestPostProcessors.httpBasic("superadmin@local.ares", "ares-test"))
+                    .header("Authorization", "Bearer " + loginResponse.get("accessToken").asText())
             )
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.email").value("superadmin@local.ares"))
             .andExpect(jsonPath("$.roles[0]").value("super-admin"))
             .andExpect(jsonPath("$.platformAdmin").value(true))
             .andExpect(jsonPath("$.companyId").value(activeCompany.getId().toString()));
+    }
+
+    @Test
+    void currentUserEndpointShouldRejectInvalidBearerToken() throws Exception {
+        mockMvc.perform(
+                get("/auth/me")
+                    .header("Authorization", "Bearer invalid-token")
+            )
+            .andExpect(status().isUnauthorized())
+            .andExpect(jsonPath("$.message").value("Invalid access token."));
+    }
+
+    @Test
+    void refreshShouldRotateTokens() throws Exception {
+        JsonNode loginResponse = login("active@local.ares", "ares-test");
+        String originalRefreshToken = loginResponse.get("refreshToken").asText();
+
+        mockMvc.perform(
+                post("/auth/refresh")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(refreshRequest(originalRefreshToken))
+            )
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.accessToken").isString())
+            .andExpect(jsonPath("$.refreshToken").isString())
+            .andExpect(jsonPath("$.refreshToken").value(org.hamcrest.Matchers.not(originalRefreshToken)))
+            .andExpect(jsonPath("$.user.email").value("active@local.ares"));
+    }
+
+    @Test
+    void refreshShouldRejectRevokedRefreshToken() throws Exception {
+        JsonNode loginResponse = login("active@local.ares", "ares-test");
+        String refreshToken = loginResponse.get("refreshToken").asText();
+
+        mockMvc.perform(
+                post("/auth/logout")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(refreshRequest(refreshToken))
+            )
+            .andExpect(status().isNoContent());
+
+        mockMvc.perform(
+                post("/auth/refresh")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(refreshRequest(refreshToken))
+            )
+            .andExpect(status().isUnauthorized())
+            .andExpect(jsonPath("$.message").value("Invalid refresh token."));
+    }
+
+    @Test
+    void refreshShouldRejectExpiredRefreshToken() throws Exception {
+        AppUser user = userRepository.findByEmailIgnoreCaseAndDeletedAtIsNull("active@local.ares")
+            .orElseThrow();
+        String rawExpiredToken = "expired-refresh-token";
+        RefreshToken expiredToken = RefreshToken.create(user, sha256(rawExpiredToken), java.time.Instant.now().minusSeconds(60));
+        refreshTokenRepository.save(expiredToken);
+
+        mockMvc.perform(
+                post("/auth/refresh")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(refreshRequest(rawExpiredToken))
+            )
+            .andExpect(status().isUnauthorized())
+            .andExpect(jsonPath("$.message").value("Invalid refresh token."));
+    }
+
+    @Test
+    void refreshShouldRejectWhenUserBecomesInactive() throws Exception {
+        JsonNode loginResponse = login("active@local.ares", "ares-test");
+        String refreshToken = loginResponse.get("refreshToken").asText();
+        AppUser user = userRepository.findByEmailIgnoreCaseAndDeletedAtIsNull("active@local.ares")
+            .orElseThrow();
+        user.updateStatus(UserStatus.INACTIVE);
+        userRepository.save(user);
+
+        mockMvc.perform(
+                post("/auth/refresh")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(refreshRequest(refreshToken))
+            )
+            .andExpect(status().isUnauthorized())
+            .andExpect(jsonPath("$.message").value("Invalid refresh token."));
+    }
+
+    @Test
+    void refreshShouldRejectWhenCompanyBecomesInactive() throws Exception {
+        JsonNode loginResponse = login("active@local.ares", "ares-test");
+        String refreshToken = loginResponse.get("refreshToken").asText();
+        Company company = companyRepository.findById(activeCompany.getId()).orElseThrow();
+        company.updateStatus(CompanyStatus.INACTIVE);
+        companyRepository.save(company);
+
+        mockMvc.perform(
+                post("/auth/refresh")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(refreshRequest(refreshToken))
+            )
+            .andExpect(status().isUnauthorized())
+            .andExpect(jsonPath("$.message").value("Invalid refresh token."));
     }
 
     private void assertLoginRejected(String email) throws Exception {
@@ -202,6 +313,24 @@ class AuthLoginIntegrationTests {
             "email", email,
             "password", password
         ));
+    }
+
+    private String refreshRequest(String refreshToken) throws Exception {
+        return objectMapper.writeValueAsString(Map.of(
+            "refreshToken", refreshToken
+        ));
+    }
+
+    private JsonNode login(String email, String password) throws Exception {
+        MvcResult result = mockMvc.perform(
+                post("/auth/login")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(loginRequest(email, password))
+            )
+            .andExpect(status().isOk())
+            .andReturn();
+
+        return objectMapper.readTree(result.getResponse().getContentAsString());
     }
 
     private AppUser createUser(
@@ -228,5 +357,15 @@ class AuthLoginIntegrationTests {
         userRoleRepository.save(UserRole.create(savedUser, role));
 
         return savedUser;
+    }
+
+    private String sha256(String value) {
+        try {
+            java.security.MessageDigest digest = java.security.MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(value.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            return java.util.HexFormat.of().formatHex(hash);
+        } catch (java.security.NoSuchAlgorithmException exception) {
+            throw new IllegalStateException(exception);
+        }
     }
 }

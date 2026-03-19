@@ -11,7 +11,6 @@ public record AuthenticatedUserResponse(
     UUID companyId,
     String companyName,
     List<String> roles,
-    boolean platformAdmin,
-    String authenticationType
+    boolean platformAdmin
 ) {
 }

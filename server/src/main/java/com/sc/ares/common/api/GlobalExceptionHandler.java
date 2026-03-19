@@ -59,7 +59,7 @@ public class GlobalExceptionHandler {
     ) {
         return buildResponse(
             HttpStatus.UNAUTHORIZED,
-            "Invalid email or password.",
+            exception.getMessage(),
             request
         );
     }

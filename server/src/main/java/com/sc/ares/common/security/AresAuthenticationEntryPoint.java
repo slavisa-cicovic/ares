@@ -31,11 +31,17 @@ public class AresAuthenticationEntryPoint implements AuthenticationEntryPoint {
         response.setStatus(HttpStatus.UNAUTHORIZED.value());
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
 
+        String message = (String) request.getAttribute(AccessTokenAuthenticationFilter.AUTH_ERROR_MESSAGE_ATTRIBUTE);
+
+        if (message == null || message.isBlank()) {
+            message = "Authentication is required.";
+        }
+
         ApiErrorResponse errorResponse = new ApiErrorResponse(
             Instant.now().toString(),
             HttpStatus.UNAUTHORIZED.value(),
             HttpStatus.UNAUTHORIZED.getReasonPhrase(),
-            "Authentication is required.",
+            message,
             request.getRequestURI()
         );
 
