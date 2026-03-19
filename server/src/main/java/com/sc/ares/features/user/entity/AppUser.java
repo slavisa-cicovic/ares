@@ -52,6 +52,32 @@ public class AppUser {
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
 
+    protected AppUser() {
+    }
+
+    public static AppUser create(
+        Company company,
+        String email,
+        String passwordHash,
+        String firstName,
+        String lastName,
+        UserStatus status
+    ) {
+        Instant now = Instant.now();
+
+        AppUser user = new AppUser();
+        user.company = company;
+        user.email = email;
+        user.passwordHash = passwordHash;
+        user.firstName = firstName;
+        user.lastName = lastName;
+        user.status = status;
+        user.createdAt = now;
+        user.updatedAt = now;
+
+        return user;
+    }
+
     public UUID getId() {
         return id;
     }

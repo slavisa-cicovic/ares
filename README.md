@@ -43,3 +43,16 @@ The backend reads local DB settings from:
 - `ARES_DB_PASSWORD`
 
 To reset local database state completely, stop the containers and remove the Docker volume used by PostgreSQL.
+
+## Development Seed Data
+
+When the backend runs with the `dev` profile, it seeds local development data:
+- companies: `Ares Demo One`, `Ares Demo Two`
+- password for all seeded users: `ares-dev`
+
+Seeded accounts:
+- `superadmin@local.ares` as `super-admin`
+- `admin.one@local.ares` as `company-admin`
+- `user.one@local.ares` as `user`
+- `admin.two@local.ares` as `company-admin`
+- `user.two@local.ares` as `user`

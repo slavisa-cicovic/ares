@@ -32,6 +32,18 @@ public class UserRole {
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
+    protected UserRole() {
+    }
+
+    public static UserRole create(AppUser user, Role role) {
+        UserRole userRole = new UserRole();
+        userRole.user = user;
+        userRole.role = role;
+        userRole.createdAt = Instant.now();
+
+        return userRole;
+    }
+
     public UUID getId() {
         return id;
     }

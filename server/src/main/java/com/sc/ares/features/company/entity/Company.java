@@ -35,6 +35,21 @@ public class Company {
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
 
+    protected Company() {
+    }
+
+    public static Company create(String name, CompanyStatus status) {
+        Instant now = Instant.now();
+
+        Company company = new Company();
+        company.name = name;
+        company.status = status;
+        company.createdAt = now;
+        company.updatedAt = now;
+
+        return company;
+    }
+
     public UUID getId() {
         return id;
     }
