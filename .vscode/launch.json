@@ -1,0 +1,21 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "java",
+      "name": "Ares Server",
+      "request": "launch",
+      "mainClass": "com.sc.ares.AresApplication",
+      "projectName": "ares",
+      "cwd": "${workspaceFolder}/server",
+      "args": "--spring.profiles.active=dev",
+      "env": {
+        "ARES_DB_HOST": "localhost",
+        "ARES_DB_PORT": "5433",
+        "ARES_DB_NAME": "ares",
+        "ARES_DB_USERNAME": "ares",
+        "ARES_DB_PASSWORD": "change_me_local"
+      }
+    }
+  ]
+}
