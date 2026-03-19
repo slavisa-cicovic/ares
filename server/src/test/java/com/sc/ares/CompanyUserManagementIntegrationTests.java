@@ -69,7 +69,6 @@ class CompanyUserManagementIntegrationTests {
     private Company companyTwo;
     private Role companyAdminRole;
     private Role userRole;
-    private Role superAdminRole;
     private AppUser adminOne;
     private AppUser userOne;
     private AppUser adminTwo;
@@ -85,7 +84,7 @@ class CompanyUserManagementIntegrationTests {
         companyOne = companyRepository.save(Company.create("Alpha Company", CompanyStatus.ACTIVE));
         companyTwo = companyRepository.save(Company.create("Beta Company", CompanyStatus.ACTIVE));
 
-        superAdminRole = roleRepository.save(Role.create(null, "super-admin", "Super Admin", RoleScope.PLATFORM, true));
+        roleRepository.save(Role.create(null, "super-admin", "Super Admin", RoleScope.PLATFORM, true));
         companyAdminRole = roleRepository.save(Role.create(null, "company-admin", "Company Admin", RoleScope.COMPANY, true));
         userRole = roleRepository.save(Role.create(null, "user", "User", RoleScope.COMPANY, true));
 
