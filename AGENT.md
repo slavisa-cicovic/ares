@@ -55,6 +55,8 @@ Desktop and mobile are separate clients for the same domain.
 ## Server Rules
 - use Spring Boot as the application foundation
 - organize code by feature/domain, not by technical layer only
+- prefer server feature modules under a `features` root, for example `features/client`, `features/item`, `features/invoice`
+- inside each feature, prefer explicit subpackages such as `controller`, `dto`, `entity`, `repository`, and `service`
 - use Flyway for schema migrations
 - validate external input at API boundaries
 - keep controllers thin
