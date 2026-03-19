@@ -1,0 +1,43 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# Editors
+.idea/
+.vscode/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Node / desktop / mobile
+node_modules/
+dist/
+build/
+coverage/
+.expo/
+.expo-shared/
+.turbo/
+
+# React Native
+android/.gradle/
+android/app/build/
+android/build/
+ios/build/
+ios/Pods/
+
+# Java / Spring Boot
+.gradle/
+target/
+out/
+*.class
+
+# Generated
+*.tsbuildinfo
