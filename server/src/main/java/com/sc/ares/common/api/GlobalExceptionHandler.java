@@ -6,6 +6,7 @@ import java.time.Instant;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.authentication.InsufficientAuthenticationException;
 import org.springframework.validation.BindException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -47,6 +48,18 @@ public class GlobalExceptionHandler {
         return buildResponse(
             HttpStatus.UNAUTHORIZED,
             exception.getMessage(),
+            request
+        );
+    }
+
+    @ExceptionHandler(AuthenticationException.class)
+    public ResponseEntity<ApiErrorResponse> handleAuthenticationException(
+        AuthenticationException exception,
+        HttpServletRequest request
+    ) {
+        return buildResponse(
+            HttpStatus.UNAUTHORIZED,
+            "Invalid email or password.",
             request
         );
     }

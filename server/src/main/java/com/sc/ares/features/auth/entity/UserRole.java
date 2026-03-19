@@ -47,4 +47,12 @@ public class UserRole {
     public UUID getId() {
         return id;
     }
+
+    public AppUser getUser() {
+        return user;
+    }
+
+    public Role getRole() {
+        return role;
+    }
 }

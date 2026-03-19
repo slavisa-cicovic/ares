@@ -46,6 +46,30 @@ public class Role {
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
 
+    protected Role() {
+    }
+
+    public static Role create(
+        Company company,
+        String code,
+        String name,
+        RoleScope scope,
+        boolean systemRole
+    ) {
+        Instant now = Instant.now();
+
+        Role role = new Role();
+        role.company = company;
+        role.code = code;
+        role.name = name;
+        role.scope = scope;
+        role.systemRole = systemRole;
+        role.createdAt = now;
+        role.updatedAt = now;
+
+        return role;
+    }
+
     public UUID getId() {
         return id;
     }

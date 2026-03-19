@@ -109,4 +109,15 @@ public class AppUser {
     public Instant getDeletedAt() {
         return deletedAt;
     }
+
+    public void updateStatus(UserStatus status) {
+        this.status = status;
+        this.updatedAt = Instant.now();
+    }
+
+    public void softDelete() {
+        Instant now = Instant.now();
+        this.deletedAt = now;
+        this.updatedAt = now;
+    }
 }

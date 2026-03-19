@@ -65,4 +65,15 @@ public class Company {
     public Instant getDeletedAt() {
         return deletedAt;
     }
+
+    public void updateStatus(CompanyStatus status) {
+        this.status = status;
+        this.updatedAt = Instant.now();
+    }
+
+    public void softDelete() {
+        Instant now = Instant.now();
+        this.deletedAt = now;
+        this.updatedAt = now;
+    }
 }
