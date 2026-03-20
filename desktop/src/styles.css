@@ -381,6 +381,15 @@ input {
   font-size: 18px;
 }
 
+.password-form-card {
+  align-content: start;
+}
+
+.password-form-grid {
+  display: grid;
+  gap: 14px;
+}
+
 .settings-layout {
   display: grid;
   grid-template-columns: 280px minmax(0, 1fr);

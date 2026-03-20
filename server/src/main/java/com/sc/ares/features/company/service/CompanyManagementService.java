@@ -1,5 +1,6 @@
 package com.sc.ares.features.company.service;
 
+import com.sc.ares.common.api.ApiBadRequestException;
 import com.sc.ares.features.company.dto.CompanyResponse;
 import com.sc.ares.features.company.dto.UpdateCompanyRequest;
 import com.sc.ares.features.company.entity.Company;
@@ -9,6 +10,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class CompanyManagementService {
+
+    private static final String SIMPLE_EMAIL_PATTERN = "^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$";
 
     private final CompanyAdminAccessService companyAdminAccessService;
     private final CompanyRepository companyRepository;
@@ -29,7 +32,15 @@ public class CompanyManagementService {
     @Transactional
     public CompanyResponse updateCurrentCompany(UpdateCompanyRequest request) {
         Company company = companyAdminAccessService.getRequiredManagedCompany();
-        company.updateName(request.name().trim());
+        company.updateProfile(
+            normalizeRequired(request.name()),
+            normalizeOptional(request.pib()),
+            normalizeOptional(request.mb()),
+            normalizeOptional(request.address()),
+            normalizeOptionalEmail(request.email()),
+            normalizeOptional(request.phone()),
+            normalizeOptional(request.bankAccount())
+        );
         companyRepository.save(company);
 
         return toResponse(company);
@@ -39,7 +50,46 @@ public class CompanyManagementService {
         return new CompanyResponse(
             company.getId(),
             company.getName(),
+            company.getPib(),
+            company.getMb(),
+            company.getAddress(),
+            company.getEmail(),
+            company.getPhone(),
+            company.getBankAccount(),
             company.getStatus().name()
         );
+    }
+
+    private String normalizeRequired(String value) {
+        String normalized = normalizeOptional(value);
+
+        if (normalized == null) {
+            throw new ApiBadRequestException("Required company field is missing.");
+        }
+
+        return normalized;
+    }
+
+    private String normalizeOptional(String value) {
+        if (value == null) {
+            return null;
+        }
+
+        String normalized = value.trim();
+        return normalized.isEmpty() ? null : normalized;
+    }
+
+    private String normalizeOptionalEmail(String value) {
+        String normalized = normalizeOptional(value);
+
+        if (normalized == null) {
+            return null;
+        }
+
+        if (!normalized.matches(SIMPLE_EMAIL_PATTERN)) {
+            throw new ApiBadRequestException("Invalid company email.");
+        }
+
+        return normalized;
     }
 }

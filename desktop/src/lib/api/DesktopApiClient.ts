@@ -1,6 +1,7 @@
 import type { SessionData, LoginPayload, AuthResponse, AuthenticatedUser } from "../../features/auth/types";
 import type {
   ApiErrorPayload,
+  ChangePasswordPayload,
   CompanyResponse,
   ReportsSummary,
   UpdateCompanyPayload
@@ -94,6 +95,13 @@ export class DesktopApiClient {
   async updateCurrentCompany(payload: UpdateCompanyPayload): Promise<CompanyResponse> {
     return this.request<CompanyResponse>("/company", {
       method: "PUT",
+      body: JSON.stringify(payload)
+    });
+  }
+
+  async changeOwnPassword(payload: ChangePasswordPayload): Promise<void> {
+    await this.request<void>("/users/me/change-password", {
+      method: "POST",
       body: JSON.stringify(payload)
     });
   }

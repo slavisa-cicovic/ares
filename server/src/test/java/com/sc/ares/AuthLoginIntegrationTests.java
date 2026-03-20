@@ -319,6 +319,91 @@ class AuthLoginIntegrationTests {
             .andExpect(jsonPath("$.message").value("Invalid refresh token."));
     }
 
+    @Test
+    void changePasswordShouldAllowAuthenticatedUserToRotateOwnPassword() throws Exception {
+        JsonNode loginResponse = login("active@local.ares", "ares-test");
+
+        mockMvc.perform(
+                post("/users/me/change-password")
+                    .header("Authorization", "Bearer " + loginResponse.get("accessToken").asText())
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(Map.of(
+                        "currentPassword", "ares-test",
+                        "newPassword", "ares-next",
+                        "confirmNewPassword", "ares-next"
+                    )))
+            )
+            .andExpect(status().isNoContent());
+
+        mockMvc.perform(
+                post("/auth/login")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(loginRequest("active@local.ares", "ares-test"))
+            )
+            .andExpect(status().isUnauthorized());
+
+        mockMvc.perform(
+                post("/auth/login")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(loginRequest("active@local.ares", "ares-next"))
+            )
+            .andExpect(status().isOk());
+    }
+
+    @Test
+    void changePasswordShouldRejectIncorrectCurrentPassword() throws Exception {
+        JsonNode loginResponse = login("active@local.ares", "ares-test");
+
+        mockMvc.perform(
+                post("/users/me/change-password")
+                    .header("Authorization", "Bearer " + loginResponse.get("accessToken").asText())
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(Map.of(
+                        "currentPassword", "wrong-password",
+                        "newPassword", "ares-next",
+                        "confirmNewPassword", "ares-next"
+                    )))
+            )
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.message").value("Current password is incorrect."));
+    }
+
+    @Test
+    void changePasswordShouldRejectMismatchedConfirmation() throws Exception {
+        JsonNode loginResponse = login("active@local.ares", "ares-test");
+
+        mockMvc.perform(
+                post("/users/me/change-password")
+                    .header("Authorization", "Bearer " + loginResponse.get("accessToken").asText())
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(Map.of(
+                        "currentPassword", "ares-test",
+                        "newPassword", "ares-next",
+                        "confirmNewPassword", "ares-mismatch"
+                    )))
+            )
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.message").value("New password confirmation does not match."));
+    }
+
+    @Test
+    void changePasswordShouldRejectSamePasswordReuse() throws Exception {
+        JsonNode loginResponse = login("active@local.ares", "ares-test");
+
+        mockMvc.perform(
+                post("/users/me/change-password")
+                    .header("Authorization", "Bearer " + loginResponse.get("accessToken").asText())
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(Map.of(
+                        "currentPassword", "ares-test",
+                        "newPassword", "ares-test",
+                        "confirmNewPassword", "ares-test"
+                    )))
+            )
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.message").value("New password must be different from the current password."));
+    }
+
     private void assertLoginRejected(String email) throws Exception {
         mockMvc.perform(
                 post("/auth/login")

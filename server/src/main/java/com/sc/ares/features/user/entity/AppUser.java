@@ -132,6 +132,11 @@ public class AppUser {
         this.updatedAt = Instant.now();
     }
 
+    public void updatePasswordHash(String passwordHash) {
+        this.passwordHash = passwordHash;
+        this.updatedAt = Instant.now();
+    }
+
     public void softDelete() {
         Instant now = Instant.now();
         this.deletedAt = now;

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import type { AuthenticatedUser } from "../auth/types";
-import type { CompanyResponse } from "../../lib/api/types";
+import type { ChangePasswordPayload, CompanyResponse, UpdateCompanyPayload } from "../../lib/api/types";
 import { ApiClientError } from "../../lib/api/DesktopApiClient";
 import { useAuth } from "../auth/AuthProvider";
 import type { DesktopTheme } from "./themeStorage";
@@ -29,15 +29,35 @@ function buildInitialCompanyName(user: AuthenticatedUser): string {
   return user.companyName;
 }
 
+function toFormValue(value: string | null | undefined): string {
+  return value ?? "";
+}
+
 export function SettingsScreen({ user, theme, onThemeChange }: SettingsScreenProps) {
-  const { getCompany, updateCompany } = useAuth();
+  const { getCompany, updateCompany, changePassword } = useAuth();
   const [activeSection, setActiveSection] = useState<SettingsSection>("company");
   const [company, setCompany] = useState<CompanyResponse | null>(null);
-  const [companyName, setCompanyName] = useState(() => buildInitialCompanyName(user));
+  const [companyForm, setCompanyForm] = useState<UpdateCompanyPayload>({
+    name: buildInitialCompanyName(user),
+    pib: null,
+    mb: null,
+    address: null,
+    email: null,
+    phone: null,
+    bankAccount: null
+  });
   const [companyLoading, setCompanyLoading] = useState(true);
   const [companySaving, setCompanySaving] = useState(false);
   const [companyError, setCompanyError] = useState<string | null>(null);
   const [companyNotice, setCompanyNotice] = useState<string | null>(null);
+  const [passwordForm, setPasswordForm] = useState<ChangePasswordPayload>({
+    currentPassword: "",
+    newPassword: "",
+    confirmNewPassword: ""
+  });
+  const [passwordSaving, setPasswordSaving] = useState(false);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [passwordNotice, setPasswordNotice] = useState<string | null>(null);
 
   const isCompanyAdmin = user.roles.includes("company-admin");
 
@@ -51,7 +71,15 @@ export function SettingsScreen({ user, theme, onThemeChange }: SettingsScreenPro
         }
 
         setCompany(response);
-        setCompanyName(response.name);
+        setCompanyForm({
+          name: response.name,
+          pib: response.pib,
+          mb: response.mb,
+          address: response.address,
+          email: response.email,
+          phone: response.phone,
+          bankAccount: response.bankAccount
+        });
         setCompanyLoading(false);
       })
       .catch((requestError) => {
@@ -79,10 +107,18 @@ export function SettingsScreen({ user, theme, onThemeChange }: SettingsScreenPro
     setCompanyNotice(null);
 
     try {
-      const updatedCompany = await updateCompany({ name: companyName });
+      const updatedCompany = await updateCompany(companyForm);
       setCompany(updatedCompany);
-      setCompanyName(updatedCompany.name);
-      setCompanyNotice("Company name updated.");
+      setCompanyForm({
+        name: updatedCompany.name,
+        pib: updatedCompany.pib,
+        mb: updatedCompany.mb,
+        address: updatedCompany.address,
+        email: updatedCompany.email,
+        phone: updatedCompany.phone,
+        bankAccount: updatedCompany.bankAccount
+      });
+      setCompanyNotice("Company profile updated.");
     } catch (requestError) {
       setCompanyError(
         requestError instanceof ApiClientError
@@ -91,6 +127,48 @@ export function SettingsScreen({ user, theme, onThemeChange }: SettingsScreenPro
       );
     } finally {
       setCompanySaving(false);
+    }
+  }
+
+  function handleCompanyCancel() {
+    if (company) {
+      setCompanyForm({
+        name: company.name,
+        pib: company.pib,
+        mb: company.mb,
+        address: company.address,
+        email: company.email,
+        phone: company.phone,
+        bankAccount: company.bankAccount
+      });
+    }
+
+    setCompanyError(null);
+    setCompanyNotice(null);
+  }
+
+  async function handlePasswordSave(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setPasswordSaving(true);
+    setPasswordError(null);
+    setPasswordNotice(null);
+
+    try {
+      await changePassword(passwordForm);
+      setPasswordForm({
+        currentPassword: "",
+        newPassword: "",
+        confirmNewPassword: ""
+      });
+      setPasswordNotice("Password updated.");
+    } catch (requestError) {
+      setPasswordError(
+        requestError instanceof ApiClientError
+          ? requestError.message
+          : "Unable to change password right now."
+      );
+    } finally {
+      setPasswordSaving(false);
     }
   }
 
@@ -134,39 +212,77 @@ export function SettingsScreen({ user, theme, onThemeChange }: SettingsScreenPro
                   <span>Company Name</span>
                   <input
                     disabled={!isCompanyAdmin || companyLoading || companySaving}
-                    onChange={(event) => setCompanyName(event.target.value)}
-                    value={companyName}
+                    onChange={(event) =>
+                      setCompanyForm((current) => ({ ...current, name: event.target.value }))
+                    }
+                    value={companyForm.name}
                   />
                 </label>
 
-                <label className="field field-disabled">
+                <label className="field">
                   <span>PIB</span>
-                  <input disabled placeholder="Backend field not available yet" value="" />
+                  <input
+                    disabled={!isCompanyAdmin || companyLoading || companySaving}
+                    onChange={(event) =>
+                      setCompanyForm((current) => ({ ...current, pib: event.target.value || null }))
+                    }
+                    value={toFormValue(companyForm.pib)}
+                  />
                 </label>
 
-                <label className="field field-disabled">
+                <label className="field">
                   <span>MB</span>
-                  <input disabled placeholder="Backend field not available yet" value="" />
+                  <input
+                    disabled={!isCompanyAdmin || companyLoading || companySaving}
+                    onChange={(event) =>
+                      setCompanyForm((current) => ({ ...current, mb: event.target.value || null }))
+                    }
+                    value={toFormValue(companyForm.mb)}
+                  />
                 </label>
 
-                <label className="field field-disabled">
+                <label className="field">
                   <span>Email</span>
-                  <input disabled placeholder="Backend field not available yet" value="" />
+                  <input
+                    disabled={!isCompanyAdmin || companyLoading || companySaving}
+                    onChange={(event) =>
+                      setCompanyForm((current) => ({ ...current, email: event.target.value || null }))
+                    }
+                    value={toFormValue(companyForm.email)}
+                  />
                 </label>
 
-                <label className="field field-disabled">
+                <label className="field">
                   <span>Phone</span>
-                  <input disabled placeholder="Backend field not available yet" value="" />
+                  <input
+                    disabled={!isCompanyAdmin || companyLoading || companySaving}
+                    onChange={(event) =>
+                      setCompanyForm((current) => ({ ...current, phone: event.target.value || null }))
+                    }
+                    value={toFormValue(companyForm.phone)}
+                  />
                 </label>
 
-                <label className="field field-disabled field-span-2">
+                <label className="field field-span-2">
                   <span>Address</span>
-                  <input disabled placeholder="Backend field not available yet" value="" />
+                  <input
+                    disabled={!isCompanyAdmin || companyLoading || companySaving}
+                    onChange={(event) =>
+                      setCompanyForm((current) => ({ ...current, address: event.target.value || null }))
+                    }
+                    value={toFormValue(companyForm.address)}
+                  />
                 </label>
 
-                <label className="field field-disabled">
+                <label className="field">
                   <span>Bank Account</span>
-                  <input disabled placeholder="Backend field not available yet" value="" />
+                  <input
+                    disabled={!isCompanyAdmin || companyLoading || companySaving}
+                    onChange={(event) =>
+                      setCompanyForm((current) => ({ ...current, bankAccount: event.target.value || null }))
+                    }
+                    value={toFormValue(companyForm.bankAccount)}
+                  />
                 </label>
 
                 <div className="settings-upload-placeholder">
@@ -188,6 +304,15 @@ export function SettingsScreen({ user, theme, onThemeChange }: SettingsScreenPro
                   {companySaving ? "Saving..." : "Save Company"}
                 </button>
 
+                <button
+                  className="secondary-button"
+                  disabled={!isCompanyAdmin || companyLoading || companySaving}
+                  onClick={handleCompanyCancel}
+                  type="button"
+                >
+                  Cancel
+                </button>
+
                 {!isCompanyAdmin ? (
                   <span className="muted-note">Only company admins can edit company settings.</span>
                 ) : null}
@@ -204,7 +329,7 @@ export function SettingsScreen({ user, theme, onThemeChange }: SettingsScreenPro
               <p>Personal account settings stay separate from tenant-wide company settings.</p>
             </div>
 
-            <div className="settings-card">
+            <form className="settings-card" onSubmit={(event) => void handlePasswordSave(event)}>
               <div className="settings-card-header">
                 <div>
                   <span className="eyebrow">Account</span>
@@ -219,15 +344,60 @@ export function SettingsScreen({ user, theme, onThemeChange }: SettingsScreenPro
 
                 <div className="profile-summary-copy">
                   <strong>{user.email}</strong>
-                  <p>User avatar and password change will live here once backend support is added.</p>
+                  <p>Password change is available now. Avatar support stays deferred until upload storage is ready.</p>
                 </div>
               </div>
 
               <div className="profile-actions-grid">
-                <div className="feature-placeholder-card">
-                  <span className="eyebrow">Future Action</span>
+                <div className="feature-placeholder-card password-form-card">
+                  <span className="eyebrow">Security</span>
                   <strong>Change Password</strong>
-                  <p>Requires dedicated backend endpoint and validation flow.</p>
+                  <div className="password-form-grid">
+                    <label className="field">
+                      <span>Current Password</span>
+                      <input
+                        disabled={passwordSaving}
+                        onChange={(event) =>
+                          setPasswordForm((current) => ({ ...current, currentPassword: event.target.value }))
+                        }
+                        type="password"
+                        value={passwordForm.currentPassword}
+                      />
+                    </label>
+
+                    <label className="field">
+                      <span>New Password</span>
+                      <input
+                        disabled={passwordSaving}
+                        onChange={(event) =>
+                          setPasswordForm((current) => ({ ...current, newPassword: event.target.value }))
+                        }
+                        type="password"
+                        value={passwordForm.newPassword}
+                      />
+                    </label>
+
+                    <label className="field">
+                      <span>Confirm New Password</span>
+                      <input
+                        disabled={passwordSaving}
+                        onChange={(event) =>
+                          setPasswordForm((current) => ({ ...current, confirmNewPassword: event.target.value }))
+                        }
+                        type="password"
+                        value={passwordForm.confirmNewPassword}
+                      />
+                    </label>
+                  </div>
+
+                  {passwordError ? <div className="error-banner inline-banner">{passwordError}</div> : null}
+                  {passwordNotice ? <div className="success-banner inline-banner">{passwordNotice}</div> : null}
+
+                  <div className="settings-actions">
+                    <button className="primary-button" disabled={passwordSaving} type="submit">
+                      {passwordSaving ? "Saving..." : "Change Password"}
+                    </button>
+                  </div>
                 </div>
 
                 <div className="feature-placeholder-card">
@@ -236,7 +406,7 @@ export function SettingsScreen({ user, theme, onThemeChange }: SettingsScreenPro
                   <p>Requires asset upload strategy and profile image storage.</p>
                 </div>
               </div>
-            </div>
+            </form>
           </div>
         ) : null}
 

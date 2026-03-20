@@ -9,7 +9,12 @@ import {
 import { DesktopApiClient, ApiClientError } from "../../lib/api/DesktopApiClient";
 import { clearSession, loadSession, saveSession } from "./sessionStorage";
 import type { LoginPayload, SessionData } from "./types";
-import type { CompanyResponse, ReportsSummary, UpdateCompanyPayload } from "../../lib/api/types";
+import type {
+  ChangePasswordPayload,
+  CompanyResponse,
+  ReportsSummary,
+  UpdateCompanyPayload
+} from "../../lib/api/types";
 
 type AuthState =
   | { status: "bootstrapping" }
@@ -23,6 +28,7 @@ type AuthContextValue = {
   getReportsSummary: () => Promise<ReportsSummary>;
   getCompany: () => Promise<CompanyResponse>;
   updateCompany: (payload: UpdateCompanyPayload) => Promise<CompanyResponse>;
+  changePassword: (payload: ChangePasswordPayload) => Promise<void>;
 };
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8080/api";
@@ -120,6 +126,9 @@ export function AuthProvider({ children }: PropsWithChildren) {
       }
 
       return updatedCompany;
+    },
+    changePassword: async (payload) => {
+      await client.changeOwnPassword(payload);
     }
   };
 

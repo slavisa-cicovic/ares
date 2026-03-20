@@ -27,6 +27,7 @@ import com.sc.ares.features.user.entity.UserStatus;
 import com.sc.ares.features.user.repository.UserRepository;
 import java.util.List;
 import java.util.Map;
+import org.hamcrest.Matchers;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -123,16 +124,60 @@ class CompanyUserManagementIntegrationTests {
                     .header("Authorization", bearer(token))
             )
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.name").value("Alpha Company"));
+            .andExpect(jsonPath("$.name").value("Alpha Company"))
+            .andExpect(jsonPath("$.pib").value(Matchers.nullValue()))
+            .andExpect(jsonPath("$.bankAccount").value(Matchers.nullValue()));
 
         mockMvc.perform(
                 put("/company")
                     .header("Authorization", bearer(token))
                     .contentType(MediaType.APPLICATION_JSON)
-                    .content(objectMapper.writeValueAsString(Map.of("name", "Alpha Company Updated")))
+                    .content(objectMapper.writeValueAsString(Map.of(
+                        "name", "Alpha Company Updated",
+                        "pib", "123456789",
+                        "mb", "98765432",
+                        "address", "Main Street 1",
+                        "email", "office@alpha.local",
+                        "phone", "+38160123456",
+                        "bankAccount", "160-123456-78"
+                    )))
             )
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.name").value("Alpha Company Updated"));
+            .andExpect(jsonPath("$.name").value("Alpha Company Updated"))
+            .andExpect(jsonPath("$.pib").value("123456789"))
+            .andExpect(jsonPath("$.mb").value("98765432"))
+            .andExpect(jsonPath("$.address").value("Main Street 1"))
+            .andExpect(jsonPath("$.email").value("office@alpha.local"))
+            .andExpect(jsonPath("$.phone").value("+38160123456"))
+            .andExpect(jsonPath("$.bankAccount").value("160-123456-78"));
+    }
+
+    @Test
+    void companyAdminShouldNormalizeOptionalCompanyFields() throws Exception {
+        String token = login("admin.one@local.ares", "ares-test").get("accessToken").asText();
+
+        mockMvc.perform(
+                put("/company")
+                    .header("Authorization", bearer(token))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(Map.of(
+                        "name", "  Alpha Company Updated  ",
+                        "pib", "   ",
+                        "mb", "",
+                        "address", "  Address  ",
+                        "email", "  office@alpha.local  ",
+                        "phone", "  +38160123456  ",
+                        "bankAccount", "   "
+                    )))
+            )
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.name").value("Alpha Company Updated"))
+            .andExpect(jsonPath("$.pib").value(Matchers.nullValue()))
+            .andExpect(jsonPath("$.mb").value(Matchers.nullValue()))
+            .andExpect(jsonPath("$.address").value("Address"))
+            .andExpect(jsonPath("$.email").value("office@alpha.local"))
+            .andExpect(jsonPath("$.phone").value("+38160123456"))
+            .andExpect(jsonPath("$.bankAccount").value(Matchers.nullValue()));
     }
 
     @Test

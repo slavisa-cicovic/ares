@@ -9,8 +9,10 @@ import com.sc.ares.features.auth.entity.RoleScope;
 import com.sc.ares.features.auth.entity.UserRole;
 import com.sc.ares.features.auth.repository.RoleRepository;
 import com.sc.ares.features.auth.repository.UserRoleRepository;
+import com.sc.ares.features.auth.service.CurrentPrincipalService;
 import com.sc.ares.features.company.entity.Company;
 import com.sc.ares.features.company.service.CompanyAdminAccessService;
+import com.sc.ares.features.user.dto.ChangePasswordRequest;
 import com.sc.ares.features.user.dto.CreateUserRequest;
 import com.sc.ares.features.user.dto.UpdateUserRequest;
 import com.sc.ares.features.user.dto.UserResponse;
@@ -48,6 +50,7 @@ public class UserManagementService {
     );
 
     private final CompanyAdminAccessService companyAdminAccessService;
+    private final CurrentPrincipalService currentPrincipalService;
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final UserRoleRepository userRoleRepository;
@@ -55,12 +58,14 @@ public class UserManagementService {
 
     public UserManagementService(
         CompanyAdminAccessService companyAdminAccessService,
+        CurrentPrincipalService currentPrincipalService,
         UserRepository userRepository,
         RoleRepository roleRepository,
         UserRoleRepository userRoleRepository,
         PasswordEncoder passwordEncoder
     ) {
         this.companyAdminAccessService = companyAdminAccessService;
+        this.currentPrincipalService = currentPrincipalService;
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
         this.userRoleRepository = userRoleRepository;
@@ -182,6 +187,27 @@ public class UserManagementService {
         }
 
         user.softDelete();
+        userRepository.save(user);
+    }
+
+    @Transactional
+    public void changeOwnPassword(ChangePasswordRequest request) {
+        AppUser user = userRepository.findByIdAndDeletedAtIsNull(currentPrincipalService.getRequiredPrincipal().userId())
+            .orElseThrow(() -> new ResourceNotFoundException("User not found."));
+
+        if (!passwordEncoder.matches(request.currentPassword(), user.getPasswordHash())) {
+            throw new ApiBadRequestException("Current password is incorrect.");
+        }
+
+        if (!request.newPassword().equals(request.confirmNewPassword())) {
+            throw new ApiBadRequestException("New password confirmation does not match.");
+        }
+
+        if (passwordEncoder.matches(request.newPassword(), user.getPasswordHash())) {
+            throw new ApiBadRequestException("New password must be different from the current password.");
+        }
+
+        user.updatePasswordHash(passwordEncoder.encode(request.newPassword()));
         userRepository.save(user);
     }
 

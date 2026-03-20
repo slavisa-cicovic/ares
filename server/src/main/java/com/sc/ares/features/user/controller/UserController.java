@@ -1,6 +1,7 @@
 package com.sc.ares.features.user.controller;
 
 import com.sc.ares.common.api.PagedResponse;
+import com.sc.ares.features.user.dto.ChangePasswordRequest;
 import com.sc.ares.features.user.dto.CreateUserRequest;
 import com.sc.ares.features.user.dto.UpdateUserRequest;
 import com.sc.ares.features.user.dto.UserResponse;
@@ -60,5 +61,11 @@ public class UserController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deleteUser(@PathVariable UUID userId) {
         userManagementService.deleteUser(userId);
+    }
+
+    @PostMapping("/me/change-password")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void changeOwnPassword(@Valid @RequestBody ChangePasswordRequest request) {
+        userManagementService.changeOwnPassword(request);
     }
 }
