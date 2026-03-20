@@ -62,7 +62,7 @@ export function Shell({
               boxSizing: "border-box",
               borderRight: "1px solid",
               borderColor: "divider",
-              px: 2,
+              px: 2.5,
               py: 3
             }
           }
@@ -72,10 +72,12 @@ export function Shell({
       >
         <Stack spacing={3}>
           <Box>
-            <Typography color="primary.main" sx={{ letterSpacing: "0.14em", textTransform: "uppercase" }} variant="overline">
+            <Typography color="primary.light" variant="overline">
               Ares
             </Typography>
-            <Typography variant="h4">Ares Desktop</Typography>
+            <Typography sx={{ color: "common.white" }} variant="h4">
+              Ares Desktop
+            </Typography>
           </Box>
 
           <List disablePadding sx={{ display: "grid", gap: 1 }}>
@@ -94,16 +96,16 @@ export function Shell({
       </Drawer>
 
       <Box sx={{ display: "flex", flexDirection: "column", flexGrow: 1, minWidth: 0 }}>
-        <AppBar color="transparent" elevation={0} position="static" sx={{ borderBottom: "1px solid", borderColor: "divider", backdropFilter: "blur(8px)" }}>
-          <Toolbar sx={{ alignItems: "flex-start", gap: 3, justifyContent: "space-between", py: 2 }}>
+        <AppBar position="static" sx={{ borderBottom: "1px solid", borderColor: "divider" }}>
+          <Toolbar sx={{ alignItems: "center", gap: 3, justifyContent: "space-between", py: 2 }}>
             <Stack alignItems="center" direction="row" spacing={2} alignSelf="center">
               <Box
                 sx={{
-                  width: 48,
-                  height: 48,
+                  width: 52,
+                  height: 52,
                   display: "grid",
                   placeItems: "center",
-                  borderRadius: 2,
+                  borderRadius: 2.5,
                   bgcolor: "primary.main",
                   color: "primary.contrastText",
                   fontWeight: 700,
@@ -116,10 +118,13 @@ export function Shell({
               <Typography variant="h5">{companyName}</Typography>
             </Stack>
 
-            <Paper elevation={0} sx={{ p: 2, minWidth: 280, alignSelf: "center" }}>
+            <Paper
+              sx={{ alignSelf: "center", minWidth: 300, p: 2.25 }}
+              variant="outlined"
+            >
               <Stack alignItems="flex-start" direction="row" justifyContent="space-between" spacing={2}>
                 <Box>
-                  <Typography color="primary.main" sx={{ letterSpacing: "0.14em", textTransform: "uppercase" }} variant="overline">
+                  <Typography color="primary.main" variant="overline">
                     Signed In
                   </Typography>
                   <Typography variant="subtitle1">{userName}</Typography>
@@ -136,7 +141,7 @@ export function Shell({
           </Toolbar>
         </AppBar>
 
-        <Box component="main" sx={{ flexGrow: 1, p: 3 }}>
+        <Box component="main" sx={{ flexGrow: 1, p: 3.5 }}>
           {children}
         </Box>
       </Box>

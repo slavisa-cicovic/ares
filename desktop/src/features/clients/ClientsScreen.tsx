@@ -169,14 +169,17 @@ export function ClientsScreen({ user }: ClientsScreenProps) {
 
   return (
     <Stack spacing={3}>
-      <Box>
-        <Typography color="primary.main" sx={{ letterSpacing: "0.14em", textTransform: "uppercase" }} variant="overline">
+      <Box sx={{ display: "grid", gap: 0.75 }}>
+        <Typography color="primary.main" variant="overline">
           Clients
         </Typography>
-        <Typography variant="h4">Client directory</Typography>
+        <Typography variant="h3">Client directory</Typography>
+        <Typography color="text.secondary" variant="body1">
+          Browse, search, and maintain clients for the active company.
+        </Typography>
       </Box>
 
-      <Paper sx={{ borderRadius: 1, p: 3 }} variant="outlined">
+      <Paper sx={{ p: 3 }} variant="outlined">
         <Stack spacing={3}>
           <Stack
             alignItems={{ md: "flex-end" }}
@@ -226,113 +229,115 @@ export function ClientsScreen({ user }: ClientsScreenProps) {
             {totalElements} {totalElements === 1 ? "client" : "clients"} in this company
           </Typography>
 
-          <TableContainer sx={{ border: "1px solid", borderColor: "divider", borderRadius: 1 }}>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  {headCells.map((cell) => (
-                    <TableCell
-                      align={cell.align}
-                      key={cell.id}
-                      sx={{ minWidth: cell.minWidth }}
-                    >
-                      {cell.sortable ? (
-                        <TableSortLabel
-                          active={table.orderBy === cell.id}
-                          direction={table.orderBy === cell.id ? table.order : "asc"}
-                          onClick={() => table.onSort(cell.id)}
-                        >
-                          {cell.label}
-                        </TableSortLabel>
-                      ) : (
-                        cell.label
-                      )}
-                    </TableCell>
-                  ))}
-                </TableRow>
-              </TableHead>
-
-              <TableBody>
-                {isLoading
-                  ? Array.from({ length: table.rowsPerPage }).map((_, index) => (
-                      <TableRow key={`skeleton-${index}`}>
-                        <TableCell colSpan={headCells.length}>
-                          <Box sx={{ py: 1 }}>
-                            <div className="ui-table-skeleton" />
-                          </Box>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  : null}
-
-                {!isLoading && rows.length === 0 ? (
+          <Paper sx={{ overflow: "hidden" }} variant="outlined">
+            <TableContainer>
+              <Table>
+                <TableHead>
                   <TableRow>
-                    <TableCell colSpan={headCells.length}>
-                      <Typography align="center" color="text.secondary" sx={{ py: 4 }} variant="body2">
-                        {search || status
-                          ? "No clients match the current filters."
-                          : "No clients have been created yet."}
-                      </Typography>
-                    </TableCell>
+                    {headCells.map((cell) => (
+                      <TableCell
+                        align={cell.align}
+                        key={cell.id}
+                        sx={{ minWidth: cell.minWidth }}
+                      >
+                        {cell.sortable ? (
+                          <TableSortLabel
+                            active={table.orderBy === cell.id}
+                            direction={table.orderBy === cell.id ? table.order : "asc"}
+                            onClick={() => table.onSort(cell.id)}
+                          >
+                            {cell.label}
+                          </TableSortLabel>
+                        ) : (
+                          cell.label
+                        )}
+                      </TableCell>
+                    ))}
                   </TableRow>
-                ) : null}
+                </TableHead>
 
-                {!isLoading
-                  ? rows.map((client) => (
-                      <TableRow hover key={client.id}>
-                        <TableCell>
-                          <Stack spacing={0.5}>
-                            <Typography fontWeight={600} variant="body2">
-                              {client.name}
-                            </Typography>
-                            <Typography color="text.secondary" variant="caption">
-                              {renderNullable(client.address)}
-                            </Typography>
-                          </Stack>
-                        </TableCell>
-                        <TableCell>{renderNullable(client.pib)}</TableCell>
-                        <TableCell>{renderNullable(client.mb)}</TableCell>
-                        <TableCell>{renderNullable(client.email)}</TableCell>
-                        <TableCell>{renderNullable(client.phone)}</TableCell>
-                        <TableCell>{formatLocation(client) || "—"}</TableCell>
-                        <TableCell>
-                          <Chip
-                            color={client.status === "ACTIVE" ? "success" : "default"}
-                            label={client.status === "ACTIVE" ? "Active" : "Inactive"}
-                            size="small"
-                            variant={client.status === "ACTIVE" ? "filled" : "outlined"}
-                          />
-                        </TableCell>
-                        <TableCell align="right">
-                          {isCompanyAdmin ? (
-                            <Button
-                              onClick={() => handleEdit(client)}
+                <TableBody>
+                  {isLoading
+                    ? Array.from({ length: table.rowsPerPage }).map((_, index) => (
+                        <TableRow key={`skeleton-${index}`}>
+                          <TableCell colSpan={headCells.length}>
+                            <Box sx={{ py: 1 }}>
+                              <div className="ui-table-skeleton" />
+                            </Box>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    : null}
+
+                  {!isLoading && rows.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={headCells.length}>
+                        <Typography align="center" color="text.secondary" sx={{ py: 4 }} variant="body2">
+                          {search || status
+                            ? "No clients match the current filters."
+                            : "No clients have been created yet."}
+                        </Typography>
+                      </TableCell>
+                    </TableRow>
+                  ) : null}
+
+                  {!isLoading
+                    ? rows.map((client) => (
+                        <TableRow hover key={client.id}>
+                          <TableCell>
+                            <Stack spacing={0.5}>
+                              <Typography fontWeight={600} variant="body2">
+                                {client.name}
+                              </Typography>
+                              <Typography color="text.secondary" variant="caption">
+                                {renderNullable(client.address)}
+                              </Typography>
+                            </Stack>
+                          </TableCell>
+                          <TableCell>{renderNullable(client.pib)}</TableCell>
+                          <TableCell>{renderNullable(client.mb)}</TableCell>
+                          <TableCell>{renderNullable(client.email)}</TableCell>
+                          <TableCell>{renderNullable(client.phone)}</TableCell>
+                          <TableCell>{formatLocation(client) || "—"}</TableCell>
+                          <TableCell>
+                            <Chip
+                              color={client.status === "ACTIVE" ? "success" : "default"}
+                              label={client.status === "ACTIVE" ? "Active" : "Inactive"}
                               size="small"
-                              startIcon={<EditRoundedIcon />}
-                              variant="text"
-                            >
-                              Edit
-                            </Button>
-                          ) : (
-                            <Typography color="text.secondary" variant="body2">
-                              View only
-                            </Typography>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  : null}
+                              variant={client.status === "ACTIVE" ? "filled" : "outlined"}
+                            />
+                          </TableCell>
+                          <TableCell align="right">
+                            {isCompanyAdmin ? (
+                              <Button
+                                onClick={() => handleEdit(client)}
+                                size="small"
+                                startIcon={<EditRoundedIcon />}
+                                variant="text"
+                              >
+                                Edit
+                              </Button>
+                            ) : (
+                              <Typography color="text.secondary" variant="body2">
+                                View only
+                              </Typography>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    : null}
 
-                {!isLoading && emptyRowsCount > 0
-                  ? Array.from({ length: emptyRowsCount }).map((_, index) => (
-                      <TableRow key={`empty-${index}`} sx={{ height: table.dense ? 52 : 66 }}>
-                        <TableCell colSpan={headCells.length} />
-                      </TableRow>
-                    ))
-                  : null}
-              </TableBody>
-            </Table>
-          </TableContainer>
+                  {!isLoading && emptyRowsCount > 0
+                    ? Array.from({ length: emptyRowsCount }).map((_, index) => (
+                        <TableRow key={`empty-${index}`} sx={{ height: table.dense ? 52 : 66 }}>
+                          <TableCell colSpan={headCells.length} />
+                        </TableRow>
+                      ))
+                    : null}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </Paper>
 
           <TablePagination
             component="div"

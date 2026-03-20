@@ -110,6 +110,18 @@ Preferred direction:
 - keep custom desktop wrappers thin and purposeful
 - do not grow a parallel long-term custom component system for things `MUI` already solves well
 
+## Theme Rules
+- desktop theme should be organized as a structured MUI theme module, not a single growing styling file
+- typography, shadows, and component overrides should be centralized under `desktop/src/theme`
+- visual polish should come primarily from theme tokens and MUI overrides, not repeated ad hoc `sx` fragments
+- presets may vary accent and surface direction, but must still share the same core typography, shadow system, and component behavior
+- shell, dialogs, forms, cards, and tables should feel like one product language
+
+Preferred direction:
+- keep `createAppTheme.ts` as a composition layer
+- define shared typography and shadow helpers
+- add focused overrides for high-impact MUI components before introducing more local styling
+
 ## Electron Rules
 - Electron-specific code must stay isolated from feature/UI code
 - keep main-process responsibilities minimal
