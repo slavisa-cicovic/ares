@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-const invoiceLineSchema = z.object({
+export const invoiceLineSchema = z.object({
   itemId: z.string().nullable(),
   itemName: z
     .string()
@@ -55,3 +55,4 @@ export const invoiceDraftSchema = z.object({
 });
 
 export type InvoiceDraftFormValues = z.infer<typeof invoiceDraftSchema>;
+export type InvoiceLineFormValues = z.infer<typeof invoiceLineSchema>;

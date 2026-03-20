@@ -11,6 +11,7 @@ type RHFAutocompleteProps<TOption, TValue> = {
   className?: string;
   getOptionLabel: (option: TOption) => string;
   getOptionValue: (option: TOption) => TValue;
+  onValueChange?: (option: TOption | null) => void;
 };
 
 export default function RHFAutocomplete<TOption, TValue extends string | number>({
@@ -22,7 +23,8 @@ export default function RHFAutocomplete<TOption, TValue extends string | number>
   disabled,
   className,
   getOptionLabel,
-  getOptionValue
+  getOptionValue,
+  onValueChange
 }: RHFAutocompleteProps<TOption, TValue>) {
   const { control, setValue } = useFormContext();
 
@@ -47,6 +49,7 @@ export default function RHFAutocomplete<TOption, TValue extends string | number>
                 shouldValidate: true,
                 shouldDirty: true
               });
+              onValueChange?.(nextOption ?? null);
             }}
             options={options}
             renderInput={(params) => (

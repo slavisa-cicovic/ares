@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import AddRoundedIcon from "@mui/icons-material/AddRounded";
 import DeleteOutlineRoundedIcon from "@mui/icons-material/DeleteOutlineRounded";
+import EditRoundedIcon from "@mui/icons-material/EditRounded";
 import {
   Alert,
   Box,
@@ -10,17 +11,20 @@ import {
   MenuItem,
   Paper,
   Stack,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableRow,
   Typography
 } from "@mui/material";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useFieldArray, useForm, useWatch } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import {
   CustomDialog,
   FormProvider,
   RHFAutocomplete,
-  RHFCurrencyField,
   RHFDatePicker,
-  RHFNumberField,
   RHFSelect,
   RHFTextField
 } from "../../components";
@@ -32,7 +36,8 @@ import type {
   UpsertInvoicePayload
 } from "../../lib/api/types";
 import { useAuth } from "../auth/AuthProvider";
-import { invoiceDraftSchema, type InvoiceDraftFormValues } from "./invoice-draft.schema";
+import { InvoiceLineItemDialog } from "./InvoiceLineItemDialog";
+import { invoiceDraftSchema, type InvoiceDraftFormValues, type InvoiceLineFormValues } from "./invoice-draft.schema";
 
 type InvoiceDraftDialogProps = {
   open: boolean;
@@ -41,7 +46,7 @@ type InvoiceDraftDialogProps = {
   onSaved: () => void;
 };
 
-const emptyLine = {
+const emptyLine: InvoiceLineFormValues = {
   itemId: null,
   itemName: "",
   itemCode: "",
@@ -75,6 +80,13 @@ function parseDecimal(value: string): number {
   const normalized = value.replace(/\./g, "").replace(",", ".");
   const parsed = Number(normalized);
   return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function formatPercent(value: string): string {
+  return `${new Intl.NumberFormat("sr-RS", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0
+  }).format(parseDecimal(value))} %`;
 }
 
 function toFormValues(invoice: InvoiceDetail | null): InvoiceDraftFormValues {
@@ -124,33 +136,39 @@ function toPayload(values: InvoiceDraftFormValues): UpsertInvoicePayload {
   };
 }
 
+function lineTotal(line: InvoiceLineFormValues): number {
+  const quantity = parseDecimal(line.quantity);
+  const unitPrice = parseDecimal(line.unitPrice);
+  const taxRate = parseDecimal(line.taxRate);
+  const subtotal = quantity * unitPrice;
+  return subtotal + subtotal * (taxRate / 100);
+}
+
 export function InvoiceDraftDialog({ open, invoiceId, onClose, onSaved }: InvoiceDraftDialogProps) {
   const { getClients, getItems, getInvoice, createInvoice, updateInvoice } = useAuth();
   const [clients, setClients] = useState<ClientSummary[]>([]);
   const [items, setItems] = useState<ItemSummary[]>([]);
   const [isBootstrapping, setIsBootstrapping] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [lineDialogOpen, setLineDialogOpen] = useState(false);
+  const [editingLineIndex, setEditingLineIndex] = useState<number | null>(null);
   const methods = useForm<InvoiceDraftFormValues>({
     defaultValues: emptyValues,
     resolver: zodResolver(invoiceDraftSchema)
   });
   const {
-    control,
+    getValues,
     handleSubmit,
     reset,
     setError,
     setValue,
     formState: { errors, isSubmitting }
   } = methods;
-  const { fields, append, remove } = useFieldArray({
-    control,
-    name: "lines"
-  });
-  const watchedLines = useWatch({ control, name: "lines" });
-  const watchedCurrency = useWatch({ control, name: "currency" });
+  const watchedLines = useWatch({ control: methods.control, name: "lines" });
+  const watchedCurrency = useWatch({ control: methods.control, name: "currency" });
 
   const totalsPreview = useMemo(() => {
-    const totals = (watchedLines ?? []).reduce(
+    return (watchedLines ?? []).reduce(
       (accumulator, line) => {
         const quantity = parseDecimal(line?.quantity ?? "");
         const unitPrice = parseDecimal(line?.unitPrice ?? "");
@@ -166,8 +184,6 @@ export function InvoiceDraftDialog({ open, invoiceId, onClose, onSaved }: Invoic
       },
       { subtotal: 0, taxTotal: 0, total: 0 }
     );
-
-    return totals;
   }, [watchedLines]);
 
   useEffect(() => {
@@ -224,41 +240,6 @@ export function InvoiceDraftDialog({ open, invoiceId, onClose, onSaved }: Invoic
     };
   }, [getClients, getInvoice, getItems, invoiceId, open, reset]);
 
-  useEffect(() => {
-    (watchedLines ?? []).forEach((line, index) => {
-      if (!line?.itemId) {
-        return;
-      }
-
-      const selectedItem = items.find((item) => item.id === line.itemId);
-      if (!selectedItem) {
-        return;
-      }
-
-      if ((line.itemName ?? "") !== selectedItem.name) {
-        setValue(`lines.${index}.itemName`, selectedItem.name, { shouldDirty: true, shouldValidate: true });
-      }
-
-      if ((line.itemCode ?? "") !== (selectedItem.code ?? "")) {
-        setValue(`lines.${index}.itemCode`, selectedItem.code ?? "", { shouldDirty: true });
-      }
-
-      if ((line.unit ?? "") !== selectedItem.unit) {
-        setValue(`lines.${index}.unit`, selectedItem.unit, { shouldDirty: true, shouldValidate: true });
-      }
-
-      const selectedPrice = selectedItem.price.toFixed(2);
-      if ((line.unitPrice ?? "") !== selectedPrice) {
-        setValue(`lines.${index}.unitPrice`, selectedPrice, { shouldDirty: true, shouldValidate: true });
-      }
-
-      const selectedTaxRate = selectedItem.taxRate.toFixed(0);
-      if ((line.taxRate ?? "") !== selectedTaxRate) {
-        setValue(`lines.${index}.taxRate`, selectedTaxRate, { shouldDirty: true, shouldValidate: true });
-      }
-    });
-  }, [items, setValue, watchedLines]);
-
   async function handleFormSubmit(values: InvoiceDraftFormValues) {
     try {
       if (invoiceId) {
@@ -274,6 +255,42 @@ export function InvoiceDraftDialog({ open, invoiceId, onClose, onSaved }: Invoic
         error instanceof ApiClientError ? error.message : "Unable to save invoice draft right now.";
       setError("root", { message });
     }
+  }
+
+  function handleOpenNewLine() {
+    setEditingLineIndex(null);
+    setLineDialogOpen(true);
+  }
+
+  function handleOpenEditLine(index: number) {
+    setEditingLineIndex(index);
+    setLineDialogOpen(true);
+  }
+
+  function handleDeleteLine(index: number) {
+    const nextLines = [...getValues("lines")];
+    nextLines.splice(index, 1);
+    setValue("lines", nextLines.length > 0 ? nextLines : [{ ...emptyLine }], {
+      shouldDirty: true,
+      shouldValidate: true
+    });
+  }
+
+  function handleSaveLine(line: InvoiceLineFormValues) {
+    const nextLines = [...getValues("lines")];
+
+    if (editingLineIndex === null) {
+      nextLines.push(line);
+    } else {
+      nextLines[editingLineIndex] = line;
+    }
+
+    setValue("lines", nextLines, {
+      shouldDirty: true,
+      shouldValidate: true
+    });
+    setEditingLineIndex(null);
+    setLineDialogOpen(false);
   }
 
   const submitForm = handleSubmit(handleFormSubmit);
@@ -311,9 +328,9 @@ export function InvoiceDraftDialog({ open, invoiceId, onClose, onSaved }: Invoic
             <Box
               sx={{
                 display: "grid",
-                    gap: 2,
-                    gridTemplateColumns: { xs: "1fr", md: "repeat(2, minmax(0, 1fr))" }
-                  }}
+                gap: 2,
+                gridTemplateColumns: { xs: "1fr", md: "repeat(2, minmax(0, 1fr))" }
+              }}
             >
               <RHFAutocomplete
                 getOptionLabel={(client) => client.name}
@@ -337,57 +354,61 @@ export function InvoiceDraftDialog({ open, invoiceId, onClose, onSaved }: Invoic
 
             <Stack alignItems="center" direction="row" justifyContent="space-between" spacing={2}>
               <Typography variant="h6">Line Items</Typography>
-              <Button
-                onClick={() => append({ ...emptyLine })}
-                startIcon={<AddRoundedIcon />}
-                variant="outlined"
-              >
+              <Button onClick={handleOpenNewLine} startIcon={<AddRoundedIcon />} variant="outlined">
                 Add Line
               </Button>
             </Stack>
 
-            <Stack spacing={2}>
-              {fields.map((field, index) => (
-                <Paper key={field.id} sx={{ p: 2.5 }} variant="outlined">
-                  <Stack spacing={2}>
-                    <Stack alignItems="center" direction="row" justifyContent="space-between" spacing={2}>
-                      <Typography variant="subtitle1">Line {index + 1}</Typography>
-                      <IconButton
-                        color="error"
-                        disabled={fields.length === 1}
-                        onClick={() => remove(index)}
-                      >
-                        <DeleteOutlineRoundedIcon />
-                      </IconButton>
-                    </Stack>
-
-                    <Box
-                      sx={{
-                        display: "grid",
-                        gap: 2,
-                        gridTemplateColumns: { xs: "1fr", md: "repeat(2, minmax(0, 1fr))" }
-                      }}
-                    >
-                      <RHFAutocomplete
-                        getOptionLabel={(item) => item.name}
-                        getOptionValue={(item) => item.id}
-                        helperText="Choose an existing item or leave empty for manual entry."
-                        label="Item"
-                        name={`lines.${index}.itemId`}
-                        options={items}
-                        placeholder="Start typing item name"
-                      />
-                      <RHFTextField label="Item Name" name={`lines.${index}.itemName`} />
-                      <RHFTextField label="Item Code" name={`lines.${index}.itemCode`} />
-                      <RHFTextField label="Unit" name={`lines.${index}.unit`} />
-                      <RHFNumberField decimals={3} label="Quantity" name={`lines.${index}.quantity`} />
-                      <RHFCurrencyField label="Unit Price" name={`lines.${index}.unitPrice`} />
-                      <RHFNumberField decimals={0} label="Tax Rate" name={`lines.${index}.taxRate`} suffix="%" />
-                    </Box>
-                  </Stack>
-                </Paper>
-              ))}
-            </Stack>
+            <Paper variant="outlined">
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>#</TableCell>
+                    <TableCell>Item</TableCell>
+                    <TableCell>Code</TableCell>
+                    <TableCell>Unit</TableCell>
+                    <TableCell align="right">Qty</TableCell>
+                    <TableCell align="right">Price</TableCell>
+                    <TableCell align="right">Tax</TableCell>
+                    <TableCell align="right">Total</TableCell>
+                    <TableCell align="right">Actions</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {watchedLines?.map((line, index) => (
+                    <TableRow key={`line-${index}`}>
+                      <TableCell>{index + 1}</TableCell>
+                      <TableCell>
+                        <Stack spacing={0.25}>
+                          <Typography variant="body2">{line.itemName || "Untitled line"}</Typography>
+                          {line.itemId ? (
+                            <Typography color="text.secondary" variant="caption">
+                              Existing item
+                            </Typography>
+                          ) : null}
+                        </Stack>
+                      </TableCell>
+                      <TableCell>{line.itemCode || "—"}</TableCell>
+                      <TableCell>{line.unit || "—"}</TableCell>
+                      <TableCell align="right">{line.quantity || "—"}</TableCell>
+                      <TableCell align="right">{line.unitPrice ? formatMoney(parseDecimal(line.unitPrice), watchedCurrency || "RSD") : "—"}</TableCell>
+                      <TableCell align="right">{line.taxRate ? formatPercent(line.taxRate) : "—"}</TableCell>
+                      <TableCell align="right">{formatMoney(lineTotal(line), watchedCurrency || "RSD")}</TableCell>
+                      <TableCell align="right">
+                        <Stack direction="row" justifyContent="flex-end" spacing={0.5}>
+                          <IconButton onClick={() => handleOpenEditLine(index)} size="small">
+                            <EditRoundedIcon fontSize="small" />
+                          </IconButton>
+                          <IconButton color="error" disabled={(watchedLines?.length ?? 0) === 1} onClick={() => handleDeleteLine(index)} size="small">
+                            <DeleteOutlineRoundedIcon fontSize="small" />
+                          </IconButton>
+                        </Stack>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </Paper>
 
             <Box sx={{ alignSelf: "flex-end", display: "grid", gap: 1, minWidth: { xs: "100%", md: 320 } }}>
               <TotalsRow label="Subtotal" value={formatMoney(totalsPreview.subtotal, watchedCurrency || "RSD")} />
@@ -402,6 +423,18 @@ export function InvoiceDraftDialog({ open, invoiceId, onClose, onSaved }: Invoic
           </Stack>
         </FormProvider>
       ) : null}
+
+      <InvoiceLineItemDialog
+        items={items}
+        line={editingLineIndex === null ? null : (watchedLines?.[editingLineIndex] ?? null)}
+        lineIndex={editingLineIndex}
+        onClose={() => {
+          setEditingLineIndex(null);
+          setLineDialogOpen(false);
+        }}
+        onSave={handleSaveLine}
+        open={lineDialogOpen}
+      />
     </CustomDialog>
   );
 }
