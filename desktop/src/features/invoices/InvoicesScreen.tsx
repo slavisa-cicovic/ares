@@ -33,7 +33,9 @@ import type {
   PagedResponse
 } from "../../lib/api/types";
 import { useAuth } from "../auth/AuthProvider";
+import type { AuthenticatedUser } from "../auth/types";
 import { InvoiceDetailDialog } from "./InvoiceDetailDialog";
+import { InvoiceDraftDialog } from "./InvoiceDraftDialog";
 
 const headCells = [
   { id: "invoiceNumber", label: "Invoice", minWidth: 160, sortable: true, align: undefined },
@@ -90,8 +92,12 @@ function paymentStatusColor(status: InvoicePaymentStatus): "default" | "warning"
   return "default";
 }
 
+function canEditDraft(user: AuthenticatedUser, invoice: InvoiceSummary): boolean {
+  return user.roles.includes("company-admin") && invoice.status === "DRAFT";
+}
+
 export function InvoicesScreen() {
-  const { getInvoices } = useAuth();
+  const { getInvoices, state } = useAuth();
   const table = useTable({
     defaultOrderBy: "issueDate",
     defaultOrder: "desc",
@@ -105,6 +111,15 @@ export function InvoicesScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedInvoiceId, setSelectedInvoiceId] = useState<string | null>(null);
+  const [editingInvoiceId, setEditingInvoiceId] = useState<string | null>(null);
+  const [isDraftDialogOpen, setIsDraftDialogOpen] = useState(false);
+
+  if (state.status !== "authenticated") {
+    return null;
+  }
+
+  const user = state.user;
+  const isCompanyAdmin = user.roles.includes("company-admin");
 
   const rows = pageData.items;
   const totalElements = pageData.totalElements;
@@ -158,7 +173,7 @@ export function InvoicesScreen() {
         </Typography>
         <Typography variant="h3">Invoice overview</Typography>
         <Typography color="text.secondary" variant="body1">
-          Browse issued and draft invoices, inspect payment state, and open full invoice detail.
+          Browse invoices, inspect payment state, and manage draft invoices.
         </Typography>
       </Box>
 
@@ -218,9 +233,23 @@ export function InvoicesScreen() {
               </FormControl>
             </Stack>
 
-            <Button onClick={() => setReloadKey((current) => current + 1)} startIcon={<RefreshRoundedIcon />} variant="outlined">
-              Refresh
-            </Button>
+            <Stack direction="row" spacing={1.5}>
+              <Button onClick={() => setReloadKey((current) => current + 1)} startIcon={<RefreshRoundedIcon />} variant="outlined">
+                Refresh
+              </Button>
+              {isCompanyAdmin ? (
+                <Button
+                  onClick={() => {
+                    setEditingInvoiceId(null);
+                    setIsDraftDialogOpen(true);
+                  }}
+                  startIcon={<ReceiptLongRoundedIcon />}
+                  variant="contained"
+                >
+                  New Invoice
+                </Button>
+              ) : null}
+            </Stack>
           </Stack>
 
           {error ? <Alert severity="error">{error}</Alert> : null}
@@ -301,14 +330,28 @@ export function InvoicesScreen() {
                           <TableCell align="right">{formatMoney(invoice.total, invoice.currency)}</TableCell>
                           <TableCell align="right">{formatMoney(invoice.outstandingAmount, invoice.currency)}</TableCell>
                           <TableCell align="right">
-                            <Button
-                              onClick={() => setSelectedInvoiceId(invoice.id)}
-                              size="small"
-                              startIcon={<ReceiptLongRoundedIcon />}
-                              variant="text"
-                            >
-                              Details
-                            </Button>
+                            <Stack direction="row" justifyContent="flex-end" spacing={1}>
+                              <Button
+                                onClick={() => setSelectedInvoiceId(invoice.id)}
+                                size="small"
+                                startIcon={<ReceiptLongRoundedIcon />}
+                                variant="text"
+                              >
+                                Details
+                              </Button>
+                              {canEditDraft(user, invoice) ? (
+                                <Button
+                                  onClick={() => {
+                                    setEditingInvoiceId(invoice.id);
+                                    setIsDraftDialogOpen(true);
+                                  }}
+                                  size="small"
+                                  variant="text"
+                                >
+                                  Edit
+                                </Button>
+                              ) : null}
+                            </Stack>
                           </TableCell>
                         </TableRow>
                       ))
@@ -342,6 +385,17 @@ export function InvoicesScreen() {
         invoiceId={selectedInvoiceId}
         onClose={() => setSelectedInvoiceId(null)}
         open={Boolean(selectedInvoiceId)}
+      />
+      <InvoiceDraftDialog
+        invoiceId={editingInvoiceId}
+        onClose={() => {
+          setEditingInvoiceId(null);
+          setIsDraftDialogOpen(false);
+        }}
+        onSaved={() => {
+          setReloadKey((current) => current + 1);
+        }}
+        open={isDraftDialogOpen}
       />
     </Stack>
   );

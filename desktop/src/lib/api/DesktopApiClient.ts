@@ -13,6 +13,7 @@ import type {
   PagedResponse,
   ReportsSummary,
   UpsertClientPayload,
+  UpsertInvoicePayload,
   UpsertItemPayload,
   UpdateCompanyPayload
 } from "./types";
@@ -210,6 +211,20 @@ export class DesktopApiClient {
 
   async getInvoice(invoiceId: string): Promise<InvoiceDetail> {
     return this.request<InvoiceDetail>(`/invoices/${invoiceId}`);
+  }
+
+  async createInvoice(payload: UpsertInvoicePayload): Promise<InvoiceDetail> {
+    return this.request<InvoiceDetail>("/invoices", {
+      method: "POST",
+      body: JSON.stringify(payload)
+    });
+  }
+
+  async updateInvoice(invoiceId: string, payload: UpsertInvoicePayload): Promise<InvoiceDetail> {
+    return this.request<InvoiceDetail>(`/invoices/${invoiceId}`, {
+      method: "PUT",
+      body: JSON.stringify(payload)
+    });
   }
 
   private async request<T>(path: string, init?: RequestInit, retry = true): Promise<T> {

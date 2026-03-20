@@ -61,3 +61,22 @@ export type ListInvoicesParams = {
   paymentStatus?: InvoicePaymentStatus;
   search?: string;
 };
+
+export type UpsertInvoiceLinePayload = {
+  itemId: string | null;
+  itemName: string;
+  itemCode: string | null;
+  unit: string;
+  quantity: number;
+  unitPrice: number;
+  taxRate: number;
+};
+
+export type UpsertInvoicePayload = {
+  clientId: string;
+  issueDate: string;
+  dueDate: string;
+  currency: string;
+  note: string | null;
+  lines: UpsertInvoiceLinePayload[];
+};

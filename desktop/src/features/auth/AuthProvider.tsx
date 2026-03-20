@@ -22,6 +22,7 @@ import type {
   PagedResponse,
   ReportsSummary,
   UpsertClientPayload,
+  UpsertInvoicePayload,
   UpsertItemPayload,
   UpdateCompanyPayload
 } from "../../lib/api/types";
@@ -48,6 +49,8 @@ type AuthContextValue = {
   deleteItem: (itemId: string) => Promise<void>;
   getInvoices: (params: ListInvoicesParams) => Promise<PagedResponse<InvoiceSummary>>;
   getInvoice: (invoiceId: string) => Promise<InvoiceDetail>;
+  createInvoice: (payload: UpsertInvoicePayload) => Promise<InvoiceDetail>;
+  updateInvoice: (invoiceId: string, payload: UpsertInvoicePayload) => Promise<InvoiceDetail>;
 };
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8080/api";
@@ -178,6 +181,12 @@ export function AuthProvider({ children }: PropsWithChildren) {
     },
     getInvoice: async (invoiceId) => {
       return client.getInvoice(invoiceId);
+    },
+    createInvoice: async (payload) => {
+      return client.createInvoice(payload);
+    },
+    updateInvoice: async (invoiceId, payload) => {
+      return client.updateInvoice(invoiceId, payload);
     }
   };
 
