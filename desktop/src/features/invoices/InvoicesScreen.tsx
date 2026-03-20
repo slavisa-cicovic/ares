@@ -24,6 +24,7 @@ import {
   TextField,
   Typography
 } from "@mui/material";
+import { ConfirmDialog } from "../../components";
 import { emptyRows, useTable } from "../../components/table";
 import { ApiClientError } from "../../lib/api/DesktopApiClient";
 import type {
@@ -97,7 +98,7 @@ function canEditDraft(user: AuthenticatedUser, invoice: InvoiceSummary): boolean
 }
 
 export function InvoicesScreen() {
-  const { getInvoices, state } = useAuth();
+  const { getInvoices, issueInvoice, state } = useAuth();
   const table = useTable({
     defaultOrderBy: "issueDate",
     defaultOrder: "desc",
@@ -113,6 +114,8 @@ export function InvoicesScreen() {
   const [selectedInvoiceId, setSelectedInvoiceId] = useState<string | null>(null);
   const [editingInvoiceId, setEditingInvoiceId] = useState<string | null>(null);
   const [isDraftDialogOpen, setIsDraftDialogOpen] = useState(false);
+  const [issueInvoiceId, setIssueInvoiceId] = useState<string | null>(null);
+  const [isIssuing, setIsIssuing] = useState(false);
 
   if (state.status !== "authenticated") {
     return null;
@@ -340,16 +343,26 @@ export function InvoicesScreen() {
                                 Details
                               </Button>
                               {canEditDraft(user, invoice) ? (
-                                <Button
-                                  onClick={() => {
-                                    setEditingInvoiceId(invoice.id);
-                                    setIsDraftDialogOpen(true);
-                                  }}
-                                  size="small"
-                                  variant="text"
-                                >
-                                  Edit
-                                </Button>
+                                <>
+                                  <Button
+                                    onClick={() => {
+                                      setEditingInvoiceId(invoice.id);
+                                      setIsDraftDialogOpen(true);
+                                    }}
+                                    size="small"
+                                    variant="text"
+                                  >
+                                    Edit
+                                  </Button>
+                                  <Button
+                                    color="warning"
+                                    onClick={() => setIssueInvoiceId(invoice.id)}
+                                    size="small"
+                                    variant="text"
+                                  >
+                                    Issue
+                                  </Button>
+                                </>
                               ) : null}
                             </Stack>
                           </TableCell>
@@ -382,7 +395,11 @@ export function InvoicesScreen() {
       </Paper>
 
       <InvoiceDetailDialog
+        canManagePayments={isCompanyAdmin}
         invoiceId={selectedInvoiceId}
+        onChanged={() => {
+          setReloadKey((current) => current + 1);
+        }}
         onClose={() => setSelectedInvoiceId(null)}
         open={Boolean(selectedInvoiceId)}
       />
@@ -396,6 +413,33 @@ export function InvoicesScreen() {
           setReloadKey((current) => current + 1);
         }}
         open={isDraftDialogOpen}
+      />
+      <ConfirmDialog
+        confirmColor="warning"
+        confirmLabel="Issue Invoice"
+        content="Issued invoices become read-only. Continue?"
+        isLoading={isIssuing}
+        onClose={() => {
+          if (!isIssuing) {
+            setIssueInvoiceId(null);
+          }
+        }}
+        onConfirm={async () => {
+          if (!issueInvoiceId) {
+            return;
+          }
+
+          try {
+            setIsIssuing(true);
+            await issueInvoice(issueInvoiceId);
+            setIssueInvoiceId(null);
+            setReloadKey((current) => current + 1);
+          } finally {
+            setIsIssuing(false);
+          }
+        }}
+        open={Boolean(issueInvoiceId)}
+        title="Issue Invoice"
       />
     </Stack>
   );

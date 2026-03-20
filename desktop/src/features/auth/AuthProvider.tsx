@@ -13,12 +13,14 @@ import type {
   ChangePasswordPayload,
   ClientSummary,
   CompanyResponse,
+  CreatePaymentPayload,
   InvoiceDetail,
   InvoiceSummary,
   ItemSummary,
   ListClientsParams,
   ListInvoicesParams,
   ListItemsParams,
+  PaymentRecord,
   PagedResponse,
   ReportsSummary,
   UpsertClientPayload,
@@ -51,6 +53,9 @@ type AuthContextValue = {
   getInvoice: (invoiceId: string) => Promise<InvoiceDetail>;
   createInvoice: (payload: UpsertInvoicePayload) => Promise<InvoiceDetail>;
   updateInvoice: (invoiceId: string, payload: UpsertInvoicePayload) => Promise<InvoiceDetail>;
+  issueInvoice: (invoiceId: string) => Promise<InvoiceDetail>;
+  getInvoicePayments: (invoiceId: string) => Promise<PaymentRecord[]>;
+  createInvoicePayment: (invoiceId: string, payload: CreatePaymentPayload) => Promise<PaymentRecord>;
 };
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8080/api";
@@ -187,6 +192,15 @@ export function AuthProvider({ children }: PropsWithChildren) {
     },
     updateInvoice: async (invoiceId, payload) => {
       return client.updateInvoice(invoiceId, payload);
+    },
+    issueInvoice: async (invoiceId) => {
+      return client.issueInvoice(invoiceId);
+    },
+    getInvoicePayments: async (invoiceId) => {
+      return client.listInvoicePayments(invoiceId);
+    },
+    createInvoicePayment: async (invoiceId, payload) => {
+      return client.createInvoicePayment(invoiceId, payload);
     }
   };
 

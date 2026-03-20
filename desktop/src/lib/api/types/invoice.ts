@@ -19,6 +19,13 @@ export type InvoiceSummary = {
   outstandingAmount: number;
 };
 
+export type PaymentRecord = {
+  id: string;
+  paymentDate: string;
+  amount: number;
+  note: string | null;
+};
+
 export type InvoiceLine = {
   id: string;
   lineNumber: number;
@@ -79,4 +86,10 @@ export type UpsertInvoicePayload = {
   currency: string;
   note: string | null;
   lines: UpsertInvoiceLinePayload[];
+};
+
+export type CreatePaymentPayload = {
+  paymentDate: string;
+  amount: number;
+  note: string | null;
 };

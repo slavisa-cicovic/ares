@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import {
   Alert,
   Box,
+  Button,
   Chip,
   Divider,
   Stack,
@@ -14,13 +15,16 @@ import {
 } from "@mui/material";
 import { CustomDialog } from "../../components";
 import { ApiClientError } from "../../lib/api/DesktopApiClient";
-import type { InvoiceDetail } from "../../lib/api/types";
+import type { InvoiceDetail, PaymentRecord } from "../../lib/api/types";
 import { useAuth } from "../auth/AuthProvider";
+import { PaymentDialog } from "./PaymentDialog";
 
 type InvoiceDetailDialogProps = {
   invoiceId: string | null;
   open: boolean;
   onClose: () => void;
+  canManagePayments: boolean;
+  onChanged: () => void;
 };
 
 function formatMoney(value: number, currency: string): string {
@@ -54,11 +58,14 @@ function paymentStatusColor(status: string): "default" | "warning" | "success" {
   return "default";
 }
 
-export function InvoiceDetailDialog({ invoiceId, open, onClose }: InvoiceDetailDialogProps) {
-  const { getInvoice } = useAuth();
+export function InvoiceDetailDialog({ invoiceId, open, onClose, canManagePayments, onChanged }: InvoiceDetailDialogProps) {
+  const { getInvoice, getInvoicePayments } = useAuth();
   const [invoice, setInvoice] = useState<InvoiceDetail | null>(null);
+  const [payments, setPayments] = useState<PaymentRecord[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     if (!open || !invoiceId) {
@@ -69,10 +76,11 @@ export function InvoiceDetailDialog({ invoiceId, open, onClose }: InvoiceDetailD
     setIsLoading(true);
     setError(null);
 
-    void getInvoice(invoiceId)
-      .then((response) => {
+    void Promise.all([getInvoice(invoiceId), getInvoicePayments(invoiceId)])
+      .then(([invoiceResponse, paymentResponse]) => {
         if (active) {
-          setInvoice(response);
+          setInvoice(invoiceResponse);
+          setPayments(paymentResponse);
         }
       })
       .catch((requestError) => {
@@ -83,6 +91,7 @@ export function InvoiceDetailDialog({ invoiceId, open, onClose }: InvoiceDetailD
               : "Unable to load invoice details right now."
           );
           setInvoice(null);
+          setPayments([]);
         }
       })
       .finally(() => {
@@ -94,10 +103,17 @@ export function InvoiceDetailDialog({ invoiceId, open, onClose }: InvoiceDetailD
     return () => {
       active = false;
     };
-  }, [getInvoice, invoiceId, open]);
+  }, [getInvoice, getInvoicePayments, invoiceId, open, reloadKey]);
 
   return (
     <CustomDialog
+      actions={
+        canManagePayments && invoice?.status === "ISSUED" ? (
+          <Button onClick={() => setIsPaymentDialogOpen(true)} variant="contained">
+            Add Payment
+          </Button>
+        ) : undefined
+      }
       onClose={onClose}
       open={open}
       size="lg"
@@ -193,6 +209,37 @@ export function InvoiceDetailDialog({ invoiceId, open, onClose }: InvoiceDetailD
 
           <Divider />
 
+          <Stack spacing={1.5}>
+            <Typography variant="subtitle1">Payments</Typography>
+
+            {payments.length === 0 ? (
+              <Typography color="text.secondary" variant="body2">
+                No payments recorded yet.
+              </Typography>
+            ) : (
+              <Table size="small">
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Date</TableCell>
+                    <TableCell align="right">Amount</TableCell>
+                    <TableCell>Note</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {payments.map((payment) => (
+                    <TableRow key={payment.id}>
+                      <TableCell>{formatDate(payment.paymentDate)}</TableCell>
+                      <TableCell align="right">{formatMoney(payment.amount, invoice.currency)}</TableCell>
+                      <TableCell>{payment.note || "—"}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </Stack>
+
+          <Divider />
+
           <Box
             sx={{
               alignSelf: "flex-end",
@@ -209,6 +256,17 @@ export function InvoiceDetailDialog({ invoiceId, open, onClose }: InvoiceDetailD
           </Box>
         </Stack>
       ) : null}
+
+      <PaymentDialog
+        currency={invoice?.currency ?? "RSD"}
+        invoiceId={invoiceId}
+        onClose={() => setIsPaymentDialogOpen(false)}
+        onSaved={() => {
+          setReloadKey((current) => current + 1);
+          onChanged();
+        }}
+        open={isPaymentDialogOpen}
+      />
     </CustomDialog>
   );
 }

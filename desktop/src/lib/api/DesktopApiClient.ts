@@ -2,6 +2,7 @@ import type { SessionData, LoginPayload, AuthResponse, AuthenticatedUser } from 
 import type {
   ApiErrorPayload,
   ChangePasswordPayload,
+  CreatePaymentPayload,
   ClientSummary,
   CompanyResponse,
   InvoiceDetail,
@@ -10,6 +11,7 @@ import type {
   ListClientsParams,
   ListInvoicesParams,
   ListItemsParams,
+  PaymentRecord,
   PagedResponse,
   ReportsSummary,
   UpsertClientPayload,
@@ -223,6 +225,23 @@ export class DesktopApiClient {
   async updateInvoice(invoiceId: string, payload: UpsertInvoicePayload): Promise<InvoiceDetail> {
     return this.request<InvoiceDetail>(`/invoices/${invoiceId}`, {
       method: "PUT",
+      body: JSON.stringify(payload)
+    });
+  }
+
+  async issueInvoice(invoiceId: string): Promise<InvoiceDetail> {
+    return this.request<InvoiceDetail>(`/invoices/${invoiceId}/issue`, {
+      method: "POST"
+    });
+  }
+
+  async listInvoicePayments(invoiceId: string): Promise<PaymentRecord[]> {
+    return this.request<PaymentRecord[]>(`/invoices/${invoiceId}/payments`);
+  }
+
+  async createInvoicePayment(invoiceId: string, payload: CreatePaymentPayload): Promise<PaymentRecord> {
+    return this.request<PaymentRecord>(`/invoices/${invoiceId}/payments`, {
+      method: "POST",
       body: JSON.stringify(payload)
     });
   }
