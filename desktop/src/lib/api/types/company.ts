@@ -1,13 +1,3 @@
-export type ReportsSummary = {
-  invoiceCount: number;
-  totalInvoicedAmount: number;
-  totalPaidAmount: number;
-  totalOutstandingAmount: number;
-  unpaidInvoiceCount: number;
-  partiallyPaidInvoiceCount: number;
-  paidInvoiceCount: number;
-};
-
 export type CompanyResponse = {
   id: string;
   name: string;
@@ -28,14 +18,4 @@ export type UpdateCompanyPayload = {
   email: string | null;
   phone: string | null;
   bankAccount: string | null;
-};
-
-export type ChangePasswordPayload = {
-  currentPassword: string;
-  newPassword: string;
-  confirmNewPassword: string;
-};
-
-export type ApiErrorPayload = {
-  message?: string;
 };
