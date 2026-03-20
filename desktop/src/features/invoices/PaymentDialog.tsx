@@ -12,15 +12,18 @@ type PaymentDialogProps = {
   open: boolean;
   invoiceId: string | null;
   currency: string;
+  defaultAmount: number;
   onClose: () => void;
   onSaved: () => void;
 };
 
-const emptyValues: PaymentFormValues = {
-  paymentDate: new Date().toISOString().slice(0, 10),
-  amount: "",
-  note: ""
-};
+function toEmptyValues(defaultAmount: number): PaymentFormValues {
+  return {
+    paymentDate: new Date().toISOString().slice(0, 10),
+    amount: defaultAmount > 0 ? defaultAmount.toFixed(2) : "",
+    note: ""
+  };
+}
 
 function toPayload(values: PaymentFormValues): CreatePaymentPayload {
   const trimmedNote = values.note.trim();
@@ -32,10 +35,10 @@ function toPayload(values: PaymentFormValues): CreatePaymentPayload {
   };
 }
 
-export function PaymentDialog({ open, invoiceId, currency, onClose, onSaved }: PaymentDialogProps) {
+export function PaymentDialog({ open, invoiceId, currency, defaultAmount, onClose, onSaved }: PaymentDialogProps) {
   const { createInvoicePayment } = useAuth();
   const methods = useForm<PaymentFormValues>({
-    defaultValues: emptyValues,
+    defaultValues: toEmptyValues(defaultAmount),
     resolver: zodResolver(paymentFormSchema)
   });
   const {
@@ -47,9 +50,9 @@ export function PaymentDialog({ open, invoiceId, currency, onClose, onSaved }: P
 
   useEffect(() => {
     if (open) {
-      reset(emptyValues);
+      reset(toEmptyValues(defaultAmount));
     }
-  }, [open, reset]);
+  }, [defaultAmount, open, reset]);
 
   const submitForm = handleSubmit(async (values) => {
     if (!invoiceId) {

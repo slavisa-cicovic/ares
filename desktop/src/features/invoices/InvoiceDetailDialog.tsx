@@ -108,7 +108,7 @@ export function InvoiceDetailDialog({ invoiceId, open, onClose, canManagePayment
   return (
     <CustomDialog
       actions={
-        canManagePayments && invoice?.status === "ISSUED" ? (
+        canManagePayments && invoice?.status === "ISSUED" && invoice.outstandingAmount > 0 ? (
           <Button onClick={() => setIsPaymentDialogOpen(true)} variant="contained">
             Add Payment
           </Button>
@@ -259,6 +259,7 @@ export function InvoiceDetailDialog({ invoiceId, open, onClose, canManagePayment
 
       <PaymentDialog
         currency={invoice?.currency ?? "RSD"}
+        defaultAmount={invoice?.outstandingAmount ?? 0}
         invoiceId={invoiceId}
         onClose={() => setIsPaymentDialogOpen(false)}
         onSaved={() => {
