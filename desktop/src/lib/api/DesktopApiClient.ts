@@ -235,6 +235,12 @@ export class DesktopApiClient {
     });
   }
 
+  async createInvoiceCreditNote(invoiceId: string): Promise<InvoiceDetail> {
+    return this.request<InvoiceDetail>(`/invoices/${invoiceId}/credit-note`, {
+      method: "POST"
+    });
+  }
+
   async listInvoicePayments(invoiceId: string): Promise<PaymentRecord[]> {
     return this.request<PaymentRecord[]>(`/invoices/${invoiceId}/payments`);
   }

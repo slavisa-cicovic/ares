@@ -14,6 +14,7 @@ import com.sc.ares.features.invoice.dto.InvoiceSummaryResponse;
 import com.sc.ares.features.invoice.dto.UpsertInvoiceLineRequest;
 import com.sc.ares.features.invoice.dto.UpsertInvoiceRequest;
 import com.sc.ares.features.invoice.entity.Invoice;
+import com.sc.ares.features.invoice.entity.InvoiceDocumentType;
 import com.sc.ares.features.invoice.entity.InvoiceLine;
 import com.sc.ares.features.invoice.entity.InvoicePaymentStatus;
 import com.sc.ares.features.invoice.entity.InvoiceStatus;
@@ -184,6 +185,38 @@ public class InvoiceService {
         return toResponse(savedInvoice, invoicePaymentStateService.getPaidAmount(savedInvoice));
     }
 
+    @Transactional
+    public InvoiceResponse createCreditNote(UUID invoiceId) {
+        UUID companyId = invoiceAccessService.getRequiredWritableCompanyId();
+        Invoice originalInvoice = getRequiredInvoice(invoiceId, companyId);
+
+        ensureCreditNoteAllowed(originalInvoice, companyId);
+
+        LocalDate issueDate = LocalDate.now();
+        int sequenceYear = issueDate.getYear();
+        int nextSequenceNumber = invoiceRepository.findFirstByCompanyIdAndSequenceYearOrderBySequenceNumberDesc(
+            companyId,
+            sequenceYear
+        ).map(invoice -> invoice.getSequenceNumber() + 1).orElse(1);
+
+        Invoice creditNote = Invoice.createCreditNote(
+            originalInvoice,
+            formatInvoiceNumber(sequenceYear, nextSequenceNumber),
+            sequenceYear,
+            nextSequenceNumber,
+            issueDate,
+            issueDate,
+            formatCreditNoteNote(originalInvoice),
+            originalInvoice.getSubtotal().negate(),
+            originalInvoice.getTaxTotal().negate(),
+            originalInvoice.getTotal().negate()
+        );
+        creditNote.replaceLines(originalInvoice.getLines().stream().map(InvoiceLine::createCreditNoteLine).toList());
+
+        Invoice savedCreditNote = invoiceRepository.save(creditNote);
+        return toResponse(savedCreditNote, invoicePaymentStateService.getPaidAmount(savedCreditNote));
+    }
+
     private Company getWritableCompany() {
         UUID companyId = invoiceAccessService.getRequiredWritableCompanyId();
         return companyRepository.findByIdAndDeletedAtIsNull(companyId)
@@ -198,6 +231,16 @@ public class InvoiceService {
     private void ensureDraft(Invoice invoice) {
         if (invoice.getStatus() != InvoiceStatus.DRAFT) {
             throw new BusinessConflictException("Issued invoice cannot be modified.");
+        }
+    }
+
+    private void ensureCreditNoteAllowed(Invoice invoice, UUID companyId) {
+        if (invoice.getDocumentType() != InvoiceDocumentType.INVOICE || invoice.getStatus() != InvoiceStatus.ISSUED) {
+            throw new BusinessConflictException("Only issued invoices can produce a credit note.");
+        }
+
+        if (invoiceRepository.findByOriginalInvoiceIdAndCompanyIdAndDeletedAtIsNull(invoice.getId(), companyId).isPresent()) {
+            throw new BusinessConflictException("Credit note already exists for this invoice.");
         }
     }
 
@@ -269,6 +312,7 @@ public class InvoiceService {
     private InvoiceSummaryResponse toSummaryResponse(Invoice invoice, Map<UUID, BigDecimal> paidAmounts) {
         BigDecimal paidAmount = paidAmounts.getOrDefault(invoice.getId(), money(BigDecimal.ZERO));
         InvoicePaymentStatus paymentStatus = invoicePaymentStateService.derivePaymentStatus(invoice, paidAmount);
+        LinkedInvoiceReference linkedInvoiceReference = linkedInvoiceReference(invoice);
 
         return new InvoiceSummaryResponse(
             invoice.getId(),
@@ -279,6 +323,11 @@ public class InvoiceService {
             invoice.getDueDate(),
             invoice.getCurrency(),
             invoice.getStatus().name(),
+            invoice.getDocumentType().name(),
+            linkedInvoiceReference.originalInvoiceId(),
+            linkedInvoiceReference.originalInvoiceNumber(),
+            linkedInvoiceReference.linkedCreditNoteId(),
+            linkedInvoiceReference.linkedCreditNoteNumber(),
             invoice.getSubtotal(),
             invoice.getTaxTotal(),
             invoice.getTotal(),
@@ -290,6 +339,7 @@ public class InvoiceService {
 
     private InvoiceResponse toResponse(Invoice invoice, BigDecimal paidAmount) {
         InvoicePaymentStatus paymentStatus = invoicePaymentStateService.derivePaymentStatus(invoice, paidAmount);
+        LinkedInvoiceReference linkedInvoiceReference = linkedInvoiceReference(invoice);
 
         return new InvoiceResponse(
             invoice.getId(),
@@ -300,6 +350,11 @@ public class InvoiceService {
             invoice.getDueDate(),
             invoice.getCurrency(),
             invoice.getStatus().name(),
+            invoice.getDocumentType().name(),
+            linkedInvoiceReference.originalInvoiceId(),
+            linkedInvoiceReference.originalInvoiceNumber(),
+            linkedInvoiceReference.linkedCreditNoteId(),
+            linkedInvoiceReference.linkedCreditNoteNumber(),
             invoice.getNote(),
             invoice.getSubtotal(),
             invoice.getTaxTotal(),
@@ -308,6 +363,35 @@ public class InvoiceService {
             paidAmount,
             invoicePaymentStateService.getOutstandingAmount(invoice, paidAmount),
             invoice.getLines().stream().map(this::toLineResponse).toList()
+        );
+    }
+
+    private LinkedInvoiceReference linkedInvoiceReference(Invoice invoice) {
+        UUID originalInvoiceId = null;
+        String originalInvoiceNumber = null;
+        UUID linkedCreditNoteId = null;
+        String linkedCreditNoteNumber = null;
+
+        if (invoice.getOriginalInvoice() != null) {
+            originalInvoiceId = invoice.getOriginalInvoice().getId();
+            originalInvoiceNumber = invoice.getOriginalInvoice().getInvoiceNumber();
+        } else {
+            Invoice linkedCreditNote = invoiceRepository.findByOriginalInvoiceIdAndCompanyIdAndDeletedAtIsNull(
+                invoice.getId(),
+                invoice.getCompany().getId()
+            ).orElse(null);
+
+            if (linkedCreditNote != null) {
+                linkedCreditNoteId = linkedCreditNote.getId();
+                linkedCreditNoteNumber = linkedCreditNote.getInvoiceNumber();
+            }
+        }
+
+        return new LinkedInvoiceReference(
+            originalInvoiceId,
+            originalInvoiceNumber,
+            linkedCreditNoteId,
+            linkedCreditNoteNumber
         );
     }
 
@@ -472,11 +556,30 @@ public class InvoiceService {
         return year + "-" + String.format("%04d", sequenceNumber);
     }
 
+    private String formatCreditNoteNote(Invoice originalInvoice) {
+        String prefix = "Credit note for invoice " + originalInvoice.getInvoiceNumber();
+        String originalNote = normalizeOptional(originalInvoice.getNote());
+
+        if (originalNote == null) {
+            return prefix;
+        }
+
+        return prefix + " | " + originalNote;
+    }
+
     private record InvoiceDraft(
         List<InvoiceLine> lines,
         BigDecimal subtotal,
         BigDecimal taxTotal,
         BigDecimal total
+    ) {
+    }
+
+    private record LinkedInvoiceReference(
+        UUID originalInvoiceId,
+        String originalInvoiceNumber,
+        UUID linkedCreditNoteId,
+        String linkedCreditNoteNumber
     ) {
     }
 }

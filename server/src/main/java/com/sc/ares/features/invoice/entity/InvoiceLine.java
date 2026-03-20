@@ -96,6 +96,22 @@ public class InvoiceLine {
         return line;
     }
 
+    public static InvoiceLine createCreditNoteLine(InvoiceLine originalLine) {
+        return create(
+            originalLine.item,
+            originalLine.lineNumber,
+            originalLine.itemName,
+            originalLine.itemCode,
+            originalLine.unit,
+            originalLine.quantity.negate(),
+            originalLine.unitPrice,
+            originalLine.taxRate,
+            originalLine.lineSubtotal.negate(),
+            originalLine.lineTaxTotal.negate(),
+            originalLine.lineTotal.negate()
+        );
+    }
+
     public UUID getId() {
         return id;
     }

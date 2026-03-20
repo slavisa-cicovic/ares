@@ -60,6 +60,14 @@ public class Invoice {
     @Column(nullable = false, length = 32)
     private InvoiceStatus status;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "document_type", nullable = false, length = 32)
+    private InvoiceDocumentType documentType;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "original_invoice_id")
+    private Invoice originalInvoice;
+
     @Column(length = 1000)
     private String note;
 
@@ -116,10 +124,48 @@ public class Invoice {
         invoice.dueDate = dueDate;
         invoice.currency = currency;
         invoice.status = InvoiceStatus.DRAFT;
+        invoice.documentType = InvoiceDocumentType.INVOICE;
         invoice.note = note;
         invoice.subtotal = subtotal;
         invoice.taxTotal = taxTotal;
         invoice.total = total;
+        invoice.createdAt = now;
+        invoice.updatedAt = now;
+
+        return invoice;
+    }
+
+    public static Invoice createCreditNote(
+        Invoice originalInvoice,
+        String invoiceNumber,
+        int sequenceYear,
+        int sequenceNumber,
+        LocalDate issueDate,
+        LocalDate dueDate,
+        String note,
+        BigDecimal subtotal,
+        BigDecimal taxTotal,
+        BigDecimal total
+    ) {
+        Instant now = Instant.now();
+
+        Invoice invoice = new Invoice();
+        invoice.company = originalInvoice.company;
+        invoice.client = originalInvoice.client;
+        invoice.invoiceNumber = invoiceNumber;
+        invoice.sequenceYear = sequenceYear;
+        invoice.sequenceNumber = sequenceNumber;
+        invoice.issueDate = issueDate;
+        invoice.dueDate = dueDate;
+        invoice.currency = originalInvoice.currency;
+        invoice.status = InvoiceStatus.ISSUED;
+        invoice.documentType = InvoiceDocumentType.CREDIT_NOTE;
+        invoice.originalInvoice = originalInvoice;
+        invoice.note = note;
+        invoice.subtotal = subtotal;
+        invoice.taxTotal = taxTotal;
+        invoice.total = total;
+        invoice.issuedAt = now;
         invoice.createdAt = now;
         invoice.updatedAt = now;
 
@@ -160,6 +206,14 @@ public class Invoice {
 
     public InvoiceStatus getStatus() {
         return status;
+    }
+
+    public InvoiceDocumentType getDocumentType() {
+        return documentType;
+    }
+
+    public Invoice getOriginalInvoice() {
+        return originalInvoice;
     }
 
     public String getNote() {

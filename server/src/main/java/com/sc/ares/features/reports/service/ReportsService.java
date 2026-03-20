@@ -73,6 +73,12 @@ public class ReportsService {
             }
         }
 
+        totalOutstandingAmount = money(totalInvoicedAmount.subtract(totalPaidAmount));
+
+        if (totalOutstandingAmount.signum() < 0) {
+            totalOutstandingAmount = money(BigDecimal.ZERO);
+        }
+
         return new ReportsSummaryResponse(
             invoices.size(),
             totalInvoicedAmount,

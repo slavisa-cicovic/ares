@@ -214,6 +214,28 @@ class ReportsSummaryIntegrationTests {
     }
 
     @Test
+    void summaryShouldNetCreditNotesIntoTotals() throws Exception {
+        String token = login("admin.one@local.ares", "ares-test").get("accessToken").asText();
+        JsonNode invoice = createAndIssueInvoice(token, companyOneClient.getId(), companyOneItem.getId(), "2026-03-10", "2026-03-17");
+
+        mockMvc.perform(
+                post("/invoices/{invoiceId}/credit-note", invoice.get("id").asText())
+                    .header("Authorization", bearer(token))
+            )
+            .andExpect(status().isOk());
+
+        mockMvc.perform(
+                get("/reports/summary")
+                    .header("Authorization", bearer(token))
+            )
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.invoiceCount").value(2))
+            .andExpect(jsonPath("$.totalInvoicedAmount").value(0.00))
+            .andExpect(jsonPath("$.totalPaidAmount").value(0.00))
+            .andExpect(jsonPath("$.totalOutstandingAmount").value(0.00));
+    }
+
+    @Test
     void invalidDateRangeShouldReturnBadRequest() throws Exception {
         String token = login("admin.one@local.ares", "ares-test").get("accessToken").asText();
 

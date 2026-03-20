@@ -2,6 +2,8 @@ export type InvoiceStatus = "DRAFT" | "ISSUED";
 
 export type InvoicePaymentStatus = "UNPAID" | "PARTIALLY_PAID" | "PAID";
 
+export type InvoiceDocumentType = "INVOICE" | "CREDIT_NOTE";
+
 export type InvoiceSummary = {
   id: string;
   invoiceNumber: string;
@@ -11,6 +13,11 @@ export type InvoiceSummary = {
   dueDate: string;
   currency: string;
   status: InvoiceStatus;
+  documentType: InvoiceDocumentType;
+  originalInvoiceId: string | null;
+  originalInvoiceNumber: string | null;
+  linkedCreditNoteId: string | null;
+  linkedCreditNoteNumber: string | null;
   subtotal: number;
   taxTotal: number;
   total: number;
@@ -50,6 +57,11 @@ export type InvoiceDetail = {
   dueDate: string;
   currency: string;
   status: InvoiceStatus;
+  documentType: InvoiceDocumentType;
+  originalInvoiceId: string | null;
+  originalInvoiceNumber: string | null;
+  linkedCreditNoteId: string | null;
+  linkedCreditNoteNumber: string | null;
   note: string | null;
   subtotal: number;
   taxTotal: number;

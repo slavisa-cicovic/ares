@@ -385,6 +385,101 @@ class InvoiceModuleIntegrationTests {
     }
 
     @Test
+    void companyAdminShouldCreateCreditNoteForIssuedInvoice() throws Exception {
+        String token = login("admin.one@local.ares", "ares-test").get("accessToken").asText();
+        JsonNode createdInvoice = createInvoice(token, companyOneClient.getId(), companyOneItem.getId());
+
+        mockMvc.perform(
+                post("/invoices/{invoiceId}/issue", createdInvoice.get("id").asText())
+                    .header("Authorization", bearer(token))
+            )
+            .andExpect(status().isOk());
+
+        mockMvc.perform(
+                post("/invoices/{invoiceId}/credit-note", createdInvoice.get("id").asText())
+                    .header("Authorization", bearer(token))
+            )
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.status").value("ISSUED"))
+            .andExpect(jsonPath("$.documentType").value("CREDIT_NOTE"))
+            .andExpect(jsonPath("$.originalInvoiceId").value(createdInvoice.get("id").asText()))
+            .andExpect(jsonPath("$.originalInvoiceNumber").value("2026-0001"))
+            .andExpect(jsonPath("$.subtotal").value(-400.00))
+            .andExpect(jsonPath("$.taxTotal").value(-80.00))
+            .andExpect(jsonPath("$.total").value(-480.00))
+            .andExpect(jsonPath("$.paymentStatus").value("PAID"))
+            .andExpect(jsonPath("$.outstandingAmount").value(0.00))
+            .andExpect(jsonPath("$.lines[0].quantity").value(-4.000))
+            .andExpect(jsonPath("$.lines[0].lineTotal").value(-480.00));
+
+        mockMvc.perform(
+                get("/invoices/{invoiceId}", createdInvoice.get("id").asText())
+                    .header("Authorization", bearer(token))
+            )
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.documentType").value("INVOICE"))
+            .andExpect(jsonPath("$.linkedCreditNoteId").isNotEmpty())
+            .andExpect(jsonPath("$.linkedCreditNoteNumber").value("2026-0002"));
+    }
+
+    @Test
+    void creditNoteShouldBeRejectedForDraftInvoice() throws Exception {
+        String token = login("admin.one@local.ares", "ares-test").get("accessToken").asText();
+        JsonNode createdInvoice = createInvoice(token, companyOneClient.getId(), companyOneItem.getId());
+
+        mockMvc.perform(
+                post("/invoices/{invoiceId}/credit-note", createdInvoice.get("id").asText())
+                    .header("Authorization", bearer(token))
+            )
+            .andExpect(status().isConflict())
+            .andExpect(jsonPath("$.message").value("Only issued invoices can produce a credit note."));
+    }
+
+    @Test
+    void repeatedCreditNoteShouldReturnConflict() throws Exception {
+        String token = login("admin.one@local.ares", "ares-test").get("accessToken").asText();
+        JsonNode createdInvoice = createInvoice(token, companyOneClient.getId(), companyOneItem.getId());
+
+        mockMvc.perform(
+                post("/invoices/{invoiceId}/issue", createdInvoice.get("id").asText())
+                    .header("Authorization", bearer(token))
+            )
+            .andExpect(status().isOk());
+
+        mockMvc.perform(
+                post("/invoices/{invoiceId}/credit-note", createdInvoice.get("id").asText())
+                    .header("Authorization", bearer(token))
+            )
+            .andExpect(status().isOk());
+
+        mockMvc.perform(
+                post("/invoices/{invoiceId}/credit-note", createdInvoice.get("id").asText())
+                    .header("Authorization", bearer(token))
+            )
+            .andExpect(status().isConflict())
+            .andExpect(jsonPath("$.message").value("Credit note already exists for this invoice."));
+    }
+
+    @Test
+    void crossTenantCreditNoteShouldReturnNotFound() throws Exception {
+        String tokenOne = login("admin.one@local.ares", "ares-test").get("accessToken").asText();
+        String tokenTwo = login("admin.two@local.ares", "ares-test").get("accessToken").asText();
+        JsonNode createdInvoice = createInvoice(tokenTwo, companyTwoClient.getId(), companyTwoItem.getId());
+
+        mockMvc.perform(
+                post("/invoices/{invoiceId}/issue", createdInvoice.get("id").asText())
+                    .header("Authorization", bearer(tokenTwo))
+            )
+            .andExpect(status().isOk());
+
+        mockMvc.perform(
+                post("/invoices/{invoiceId}/credit-note", createdInvoice.get("id").asText())
+                    .header("Authorization", bearer(tokenOne))
+            )
+            .andExpect(status().isNotFound());
+    }
+
+    @Test
     void invalidPayloadShouldReturnBadRequest() throws Exception {
         String token = login("admin.one@local.ares", "ares-test").get("accessToken").asText();
 

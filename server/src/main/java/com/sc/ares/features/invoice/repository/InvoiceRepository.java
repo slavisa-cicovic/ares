@@ -15,6 +15,8 @@ public interface InvoiceRepository extends JpaRepository<Invoice, UUID> {
 
     Optional<Invoice> findByCompanyIdAndInvoiceNumberAndDeletedAtIsNull(UUID companyId, String invoiceNumber);
 
+    Optional<Invoice> findByOriginalInvoiceIdAndCompanyIdAndDeletedAtIsNull(UUID originalInvoiceId, UUID companyId);
+
     Optional<Invoice> findFirstByCompanyIdAndSequenceYearOrderBySequenceNumberDesc(UUID companyId, int sequenceYear);
 
     @Query("""

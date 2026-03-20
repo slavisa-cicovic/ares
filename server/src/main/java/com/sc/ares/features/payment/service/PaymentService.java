@@ -4,6 +4,7 @@ import com.sc.ares.common.api.ApiBadRequestException;
 import com.sc.ares.common.api.BusinessConflictException;
 import com.sc.ares.common.api.ResourceNotFoundException;
 import com.sc.ares.features.invoice.entity.Invoice;
+import com.sc.ares.features.invoice.entity.InvoiceDocumentType;
 import com.sc.ares.features.invoice.entity.InvoiceStatus;
 import com.sc.ares.features.invoice.repository.InvoiceRepository;
 import com.sc.ares.features.invoice.service.InvoiceAccessService;
@@ -78,6 +79,10 @@ public class PaymentService {
     private void ensureIssued(Invoice invoice) {
         if (invoice.getStatus() != InvoiceStatus.ISSUED) {
             throw new BusinessConflictException("Payments can only be recorded for issued invoices.");
+        }
+
+        if (invoice.getDocumentType() != InvoiceDocumentType.INVOICE) {
+            throw new BusinessConflictException("Payments cannot be recorded for credit notes.");
         }
     }
 

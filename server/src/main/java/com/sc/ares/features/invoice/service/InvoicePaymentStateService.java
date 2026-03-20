@@ -1,6 +1,7 @@
 package com.sc.ares.features.invoice.service;
 
 import com.sc.ares.features.invoice.entity.Invoice;
+import com.sc.ares.features.invoice.entity.InvoiceDocumentType;
 import com.sc.ares.features.invoice.entity.InvoicePaymentStatus;
 import com.sc.ares.features.invoice.entity.InvoiceStatus;
 import com.sc.ares.features.payment.repository.InvoicePaidAmountProjection;
@@ -44,6 +45,10 @@ public class InvoicePaymentStateService {
     }
 
     public BigDecimal getOutstandingAmount(Invoice invoice, BigDecimal paidAmount) {
+        if (invoice.getDocumentType() == InvoiceDocumentType.CREDIT_NOTE) {
+            return money(BigDecimal.ZERO);
+        }
+
         BigDecimal outstandingAmount = money(invoice.getTotal().subtract(paidAmount));
 
         if (outstandingAmount.signum() < 0) {
@@ -54,6 +59,10 @@ public class InvoicePaymentStateService {
     }
 
     public InvoicePaymentStatus derivePaymentStatus(Invoice invoice, BigDecimal paidAmount) {
+        if (invoice.getDocumentType() == InvoiceDocumentType.CREDIT_NOTE) {
+            return InvoicePaymentStatus.PAID;
+        }
+
         if (invoice.getStatus() == InvoiceStatus.DRAFT || paidAmount.compareTo(BigDecimal.ZERO) == 0) {
             return InvoicePaymentStatus.UNPAID;
         }

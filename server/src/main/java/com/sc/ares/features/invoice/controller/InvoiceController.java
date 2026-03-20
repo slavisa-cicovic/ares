@@ -56,6 +56,11 @@ public class InvoiceController {
         return invoiceService.issueInvoice(invoiceId);
     }
 
+    @PostMapping("/{invoiceId}/credit-note")
+    public InvoiceResponse createCreditNote(@PathVariable UUID invoiceId) {
+        return invoiceService.createCreditNote(invoiceId);
+    }
+
     @PutMapping("/{invoiceId}")
     public InvoiceResponse updateInvoice(@PathVariable UUID invoiceId, @Valid @RequestBody UpsertInvoiceRequest request) {
         return invoiceService.updateInvoice(invoiceId, request);
