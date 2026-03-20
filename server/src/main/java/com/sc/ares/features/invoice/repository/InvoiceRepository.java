@@ -13,6 +13,8 @@ public interface InvoiceRepository extends JpaRepository<Invoice, UUID> {
 
     Optional<Invoice> findByIdAndCompanyIdAndDeletedAtIsNull(UUID id, UUID companyId);
 
+    Optional<Invoice> findByCompanyIdAndInvoiceNumberAndDeletedAtIsNull(UUID companyId, String invoiceNumber);
+
     Optional<Invoice> findFirstByCompanyIdAndSequenceYearOrderBySequenceNumberDesc(UUID companyId, int sequenceYear);
 
     @Query("""

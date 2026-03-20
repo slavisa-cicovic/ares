@@ -9,6 +9,8 @@ import org.springframework.data.jpa.repository.Query;
 
 public interface PaymentRepository extends JpaRepository<Payment, UUID> {
 
+    boolean existsByInvoice_IdAndNote(UUID invoiceId, String note);
+
     List<Payment> findAllByInvoice_IdAndCompany_IdOrderByPaymentDateDescCreatedAtDesc(UUID invoiceId, UUID companyId);
 
     @Query("""

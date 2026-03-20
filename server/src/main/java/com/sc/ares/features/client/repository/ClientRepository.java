@@ -2,6 +2,7 @@ package com.sc.ares.features.client.repository;
 
 import com.sc.ares.features.client.entity.Client;
 import com.sc.ares.features.client.entity.ClientStatus;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.domain.Page;
@@ -12,6 +13,8 @@ import org.springframework.data.jpa.repository.Query;
 public interface ClientRepository extends JpaRepository<Client, UUID> {
 
     Optional<Client> findByCompanyIdAndNameAndDeletedAtIsNull(UUID companyId, String name);
+
+    List<Client> findAllByCompanyIdAndDeletedAtIsNullOrderByNameAsc(UUID companyId);
 
     Optional<Client> findByIdAndCompanyIdAndDeletedAtIsNull(UUID id, UUID companyId);
 

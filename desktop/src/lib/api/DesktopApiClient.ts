@@ -4,8 +4,11 @@ import type {
   ChangePasswordPayload,
   ClientSummary,
   CompanyResponse,
+  InvoiceDetail,
+  InvoiceSummary,
   ItemSummary,
   ListClientsParams,
+  ListInvoicesParams,
   ListItemsParams,
   PagedResponse,
   ReportsSummary,
@@ -181,6 +184,32 @@ export class DesktopApiClient {
     await this.request<void>(`/items/${itemId}`, {
       method: "DELETE"
     });
+  }
+
+  async listInvoices(params: ListInvoicesParams): Promise<PagedResponse<InvoiceSummary>> {
+    const query = new URLSearchParams({
+      page: String(params.page),
+      size: String(params.size),
+      sort: params.sort
+    });
+
+    if (params.status) {
+      query.set("status", params.status);
+    }
+
+    if (params.paymentStatus) {
+      query.set("paymentStatus", params.paymentStatus);
+    }
+
+    if (params.search && params.search.trim()) {
+      query.set("search", params.search.trim());
+    }
+
+    return this.request<PagedResponse<InvoiceSummary>>(`/invoices?${query.toString()}`);
+  }
+
+  async getInvoice(invoiceId: string): Promise<InvoiceDetail> {
+    return this.request<InvoiceDetail>(`/invoices/${invoiceId}`);
   }
 
   private async request<T>(path: string, init?: RequestInit, retry = true): Promise<T> {

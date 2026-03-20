@@ -10,15 +10,25 @@ import com.sc.ares.features.client.repository.ClientRepository;
 import com.sc.ares.features.company.entity.Company;
 import com.sc.ares.features.company.entity.CompanyStatus;
 import com.sc.ares.features.company.repository.CompanyRepository;
+import com.sc.ares.features.invoice.entity.Invoice;
+import com.sc.ares.features.invoice.entity.InvoiceLine;
+import com.sc.ares.features.invoice.entity.InvoiceStatus;
+import com.sc.ares.features.invoice.repository.InvoiceRepository;
 import com.sc.ares.features.item.entity.Item;
 import com.sc.ares.features.item.entity.ItemStatus;
 import com.sc.ares.features.item.repository.ItemRepository;
+import com.sc.ares.features.payment.entity.Payment;
+import com.sc.ares.features.payment.repository.PaymentRepository;
 import com.sc.ares.features.user.entity.AppUser;
 import com.sc.ares.features.user.entity.UserStatus;
 import com.sc.ares.features.user.repository.UserRepository;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.context.annotation.Profile;
@@ -38,6 +48,8 @@ public class DevSeedDataRunner implements ApplicationRunner {
     private final UserRoleRepository userRoleRepository;
     private final ClientRepository clientRepository;
     private final ItemRepository itemRepository;
+    private final InvoiceRepository invoiceRepository;
+    private final PaymentRepository paymentRepository;
     private final PasswordEncoder passwordEncoder;
 
     public DevSeedDataRunner(
@@ -47,6 +59,8 @@ public class DevSeedDataRunner implements ApplicationRunner {
         UserRoleRepository userRoleRepository,
         ClientRepository clientRepository,
         ItemRepository itemRepository,
+        InvoiceRepository invoiceRepository,
+        PaymentRepository paymentRepository,
         PasswordEncoder passwordEncoder
     ) {
         this.companyRepository = companyRepository;
@@ -55,6 +69,8 @@ public class DevSeedDataRunner implements ApplicationRunner {
         this.userRoleRepository = userRoleRepository;
         this.clientRepository = clientRepository;
         this.itemRepository = itemRepository;
+        this.invoiceRepository = invoiceRepository;
+        this.paymentRepository = paymentRepository;
         this.passwordEncoder = passwordEncoder;
     }
 
@@ -110,6 +126,8 @@ public class DevSeedDataRunner implements ApplicationRunner {
         seedClients(companyTwo, "beta");
         seedItems(companyOne, adminOne, userOne, "alpha");
         seedItems(companyTwo, adminTwo, userTwo, "beta");
+        seedInvoices(companyOne, "alpha");
+        seedInvoices(companyTwo, "beta");
     }
 
     private Company ensureCompany(String name) {
@@ -281,6 +299,180 @@ public class DevSeedDataRunner implements ApplicationRunner {
                     status
                 )
             ));
+    }
+
+    private void seedInvoices(Company company, String companySlug) {
+        List<Client> activeClients = clientRepository.findAllByCompanyIdAndDeletedAtIsNullOrderByNameAsc(company.getId())
+            .stream()
+            .filter(client -> client.getStatus() == ClientStatus.ACTIVE)
+            .toList();
+        List<Item> activeItems = itemRepository.findAllByCompanyIdAndDeletedAtIsNullOrderByNameAsc(company.getId())
+            .stream()
+            .filter(item -> item.getStatus() == ItemStatus.ACTIVE)
+            .toList();
+
+        if (activeClients.isEmpty() || activeItems.size() < 2) {
+            return;
+        }
+
+        int sequenceYear = LocalDate.now().getYear();
+        LocalDate baseIssueDate = LocalDate.now().minusDays(42);
+
+        for (int index = 0; index < 14; index++) {
+            Client client = activeClients.get(index % activeClients.size());
+            Item firstItem = activeItems.get(index % activeItems.size());
+            Item secondItem = activeItems.get((index + 3) % activeItems.size());
+            String invoiceNumber = "%d-%04d".formatted(sequenceYear, index + 1);
+            LocalDate issueDate = baseIssueDate.plusDays(index * 2L);
+            LocalDate dueDate = issueDate.plusDays(15);
+            boolean issued = index >= 4;
+            BigDecimal paymentRatio = switch (index % 4) {
+                case 1 -> new BigDecimal("0.50");
+                case 2 -> BigDecimal.ONE;
+                default -> BigDecimal.ZERO;
+            };
+
+            ensureInvoice(
+                company,
+                companySlug,
+                client,
+                firstItem,
+                secondItem,
+                invoiceNumber,
+                sequenceYear,
+                index + 1,
+                issueDate,
+                dueDate,
+                issued,
+                paymentRatio
+            );
+        }
+    }
+
+    private void ensureInvoice(
+        Company company,
+        String companySlug,
+        Client client,
+        Item firstItem,
+        Item secondItem,
+        String invoiceNumber,
+        int sequenceYear,
+        int sequenceNumber,
+        LocalDate issueDate,
+        LocalDate dueDate,
+        boolean issued,
+        BigDecimal paymentRatio
+    ) {
+        Invoice invoice = invoiceRepository.findByCompanyIdAndInvoiceNumberAndDeletedAtIsNull(company.getId(), invoiceNumber)
+            .orElseGet(() -> invoiceRepository.save(createInvoice(
+                company,
+                companySlug,
+                client,
+                firstItem,
+                secondItem,
+                invoiceNumber,
+                sequenceYear,
+                sequenceNumber,
+                issueDate,
+                dueDate
+            )));
+
+        if (issued && invoice.getStatus() == InvoiceStatus.DRAFT) {
+            invoice.issue();
+            invoice = invoiceRepository.save(invoice);
+        }
+
+        if (issued && paymentRatio.compareTo(BigDecimal.ZERO) > 0) {
+            ensureInvoicePayment(invoice, paymentRatio);
+        }
+    }
+
+    private Invoice createInvoice(
+        Company company,
+        String companySlug,
+        Client client,
+        Item firstItem,
+        Item secondItem,
+        String invoiceNumber,
+        int sequenceYear,
+        int sequenceNumber,
+        LocalDate issueDate,
+        LocalDate dueDate
+    ) {
+        BigDecimal firstQuantity = new BigDecimal("1.00");
+        BigDecimal secondQuantity = new BigDecimal("2.00");
+
+        InvoiceLine firstLine = createInvoiceLine(1, firstItem, firstQuantity);
+        InvoiceLine secondLine = createInvoiceLine(2, secondItem, secondQuantity);
+
+        BigDecimal subtotal = money(firstLine.getLineSubtotal().add(secondLine.getLineSubtotal()));
+        BigDecimal taxTotal = money(firstLine.getLineTaxTotal().add(secondLine.getLineTaxTotal()));
+        BigDecimal total = money(subtotal.add(taxTotal));
+
+        Invoice invoice = Invoice.create(
+            company,
+            client,
+            invoiceNumber,
+            sequenceYear,
+            sequenceNumber,
+            issueDate,
+            dueDate,
+            "RSD",
+            "DEV seed invoice for %s".formatted(companySlug.toUpperCase()),
+            subtotal,
+            taxTotal,
+            total
+        );
+        invoice.replaceLines(List.of(firstLine, secondLine));
+
+        return invoice;
+    }
+
+    private InvoiceLine createInvoiceLine(int lineNumber, Item item, BigDecimal quantity) {
+        BigDecimal lineSubtotal = money(quantity.multiply(item.getPrice()));
+        BigDecimal lineTaxTotal = money(
+            lineSubtotal.multiply(item.getTaxRate()).divide(new BigDecimal("100"), 2, RoundingMode.HALF_UP)
+        );
+        BigDecimal lineTotal = money(lineSubtotal.add(lineTaxTotal));
+
+        return InvoiceLine.create(
+            item,
+            lineNumber,
+            item.getName(),
+            item.getCode(),
+            item.getUnit(),
+            quantity,
+            item.getPrice(),
+            item.getTaxRate(),
+            lineSubtotal,
+            lineTaxTotal,
+            lineTotal
+        );
+    }
+
+    private void ensureInvoicePayment(Invoice invoice, BigDecimal paymentRatio) {
+        String note = "DEV seed payment %s".formatted(paymentRatio.stripTrailingZeros().toPlainString());
+        if (paymentRepository.existsByInvoice_IdAndNote(invoice.getId(), note)) {
+            return;
+        }
+
+        BigDecimal amount = money(invoice.getTotal().multiply(paymentRatio));
+        if (amount.compareTo(BigDecimal.ZERO) <= 0) {
+            return;
+        }
+
+        paymentRepository.save(
+            Payment.create(
+                invoice,
+                invoice.getIssueDate().plusDays(7),
+                amount,
+                note
+            )
+        );
+    }
+
+    private BigDecimal money(BigDecimal value) {
+        return value.setScale(2, RoundingMode.HALF_UP);
     }
 
     private record DevClientSeed(

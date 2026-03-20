@@ -2,6 +2,7 @@ package com.sc.ares.features.item.repository;
 
 import com.sc.ares.features.item.entity.Item;
 import com.sc.ares.features.item.entity.ItemStatus;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.domain.Page;
@@ -12,6 +13,8 @@ import org.springframework.data.jpa.repository.Query;
 public interface ItemRepository extends JpaRepository<Item, UUID> {
 
     Optional<Item> findByIdAndCompanyIdAndDeletedAtIsNull(UUID id, UUID companyId);
+
+    List<Item> findAllByCompanyIdAndDeletedAtIsNullOrderByNameAsc(UUID companyId);
 
     Optional<Item> findByCompanyIdAndCodeIgnoreCaseAndDeletedAtIsNull(UUID companyId, String code);
 

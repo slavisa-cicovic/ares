@@ -13,8 +13,11 @@ import type {
   ChangePasswordPayload,
   ClientSummary,
   CompanyResponse,
+  InvoiceDetail,
+  InvoiceSummary,
   ItemSummary,
   ListClientsParams,
+  ListInvoicesParams,
   ListItemsParams,
   PagedResponse,
   ReportsSummary,
@@ -43,6 +46,8 @@ type AuthContextValue = {
   createItem: (payload: UpsertItemPayload) => Promise<ItemSummary>;
   updateItem: (itemId: string, payload: UpsertItemPayload) => Promise<ItemSummary>;
   deleteItem: (itemId: string) => Promise<void>;
+  getInvoices: (params: ListInvoicesParams) => Promise<PagedResponse<InvoiceSummary>>;
+  getInvoice: (invoiceId: string) => Promise<InvoiceDetail>;
 };
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8080/api";
@@ -167,6 +172,12 @@ export function AuthProvider({ children }: PropsWithChildren) {
     },
     deleteItem: async (itemId) => {
       await client.deleteItem(itemId);
+    },
+    getInvoices: async (params) => {
+      return client.listInvoices(params);
+    },
+    getInvoice: async (invoiceId) => {
+      return client.getInvoice(invoiceId);
     }
   };
 
