@@ -26,6 +26,7 @@ import {
   TextField,
   Typography
 } from "@mui/material";
+import { ConfirmDialog } from "../../components";
 import { emptyRows, useTable } from "../../components/table";
 import { ApiClientError } from "../../lib/api/DesktopApiClient";
 import type { ItemStatus, ItemSummary, PagedResponse } from "../../lib/api/types";
@@ -96,6 +97,8 @@ export function ItemsScreen({ user }: ItemsScreenProps) {
   const [error, setError] = useState<string | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<ItemSummary | null>(null);
+  const [itemToDelete, setItemToDelete] = useState<ItemSummary | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const isCompanyAdmin = user.roles.includes("company-admin");
   const canCreateItem = isCompanyAdmin || user.roles.includes("user");
@@ -178,13 +181,19 @@ export function ItemsScreen({ user }: ItemsScreenProps) {
     setIsDialogOpen(true);
   }
 
-  async function handleDelete(item: ItemSummary) {
-    if (!window.confirm(`Delete item "${item.name}"?`)) {
+  function handleRequestDelete(item: ItemSummary) {
+    setItemToDelete(item);
+  }
+
+  async function handleConfirmDelete() {
+    if (!itemToDelete) {
       return;
     }
 
+    setIsDeleting(true);
     try {
-      await deleteItem(item.id);
+      await deleteItem(itemToDelete.id);
+      setItemToDelete(null);
       handleRefresh();
     } catch (requestError) {
       setError(
@@ -192,6 +201,8 @@ export function ItemsScreen({ user }: ItemsScreenProps) {
           ? requestError.message
           : "Unable to delete item right now."
       );
+    } finally {
+      setIsDeleting(false);
     }
   }
 
@@ -352,7 +363,7 @@ export function ItemsScreen({ user }: ItemsScreenProps) {
                                 </Button>
                                 <Button
                                   color="error"
-                                  onClick={() => void handleDelete(item)}
+                                  onClick={() => handleRequestDelete(item)}
                                   size="small"
                                   startIcon={<DeleteOutlineRoundedIcon />}
                                   variant="text"
@@ -399,6 +410,27 @@ export function ItemsScreen({ user }: ItemsScreenProps) {
         onClose={handleDialogClose}
         onSaved={handleRefresh}
         open={isDialogOpen}
+      />
+
+      <ConfirmDialog
+        confirmColor="error"
+        confirmLabel="Delete"
+        content={
+          <Typography color="text.secondary" variant="body2">
+            {itemToDelete
+              ? `Delete item "${itemToDelete.name}"?`
+              : "Delete this item?"}
+          </Typography>
+        }
+        isLoading={isDeleting}
+        onClose={() => {
+          if (!isDeleting) {
+            setItemToDelete(null);
+          }
+        }}
+        onConfirm={handleConfirmDelete}
+        open={Boolean(itemToDelete)}
+        title="Delete Item"
       />
     </Stack>
   );
