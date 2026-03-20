@@ -42,7 +42,7 @@ public class ReportsService {
         List<Invoice> invoices = invoiceRepository.findAllByCompanyIdAndFilters(
             companyId,
             null,
-            null,
+            "",
             Sort.by(Sort.Direction.DESC, "issueDate")
         ).stream()
             .filter(invoice -> matchesDateRange(invoice, from, to))

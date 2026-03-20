@@ -24,7 +24,7 @@ public interface ItemRepository extends JpaRepository<Item, UUID> {
           and item.deletedAt is null
           and (:status is null or item.status = :status)
           and (
-              :search is null
+              :search = ''
               or upper(item.name) like upper(concat('%', :search, '%'))
               or upper(item.code) like upper(concat('%', :search, '%'))
           )

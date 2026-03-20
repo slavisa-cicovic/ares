@@ -32,7 +32,7 @@ public interface UserRepository extends JpaRepository<AppUser, UUID> {
           and user.deletedAt is null
           and (:status is null or user.status = :status)
           and (
-              :search is null
+              :search = ''
               or upper(user.email) like upper(concat('%', :search, '%'))
               or upper(user.firstName) like upper(concat('%', :search, '%'))
               or upper(user.lastName) like upper(concat('%', :search, '%'))

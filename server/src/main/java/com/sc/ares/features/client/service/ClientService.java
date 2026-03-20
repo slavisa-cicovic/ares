@@ -225,6 +225,7 @@ public class ClientService {
     }
 
     private String normalizeSearch(String search) {
-        return normalizeOptional(search);
+        String normalized = normalizeOptional(search);
+        return normalized == null ? "" : normalized;
     }
 }

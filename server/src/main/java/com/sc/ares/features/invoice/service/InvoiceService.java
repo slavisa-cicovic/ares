@@ -396,7 +396,8 @@ public class InvoiceService {
     }
 
     private String normalizeSearch(String search) {
-        return normalizeOptional(search);
+        String normalized = normalizeOptional(search);
+        return normalized == null ? "" : normalized;
     }
 
     private String normalizeCurrency(String currency) {

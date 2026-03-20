@@ -20,7 +20,7 @@ public interface ClientRepository extends JpaRepository<Client, UUID> {
           and client.deletedAt is null
           and (:status is null or client.status = :status)
           and (
-              :search is null
+              :search = ''
               or upper(client.name) like upper(concat('%', :search, '%'))
               or upper(client.email) like upper(concat('%', :search, '%'))
               or upper(client.pib) like upper(concat('%', :search, '%'))

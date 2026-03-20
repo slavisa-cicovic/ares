@@ -23,7 +23,7 @@ public interface InvoiceRepository extends JpaRepository<Invoice, UUID> {
           and invoice.deletedAt is null
           and (:status is null or invoice.status = :status)
           and (
-              :search is null
+              :search = ''
               or upper(invoice.invoiceNumber) like upper(concat('%', :search, '%'))
               or upper(client.name) like upper(concat('%', :search, '%'))
           )
