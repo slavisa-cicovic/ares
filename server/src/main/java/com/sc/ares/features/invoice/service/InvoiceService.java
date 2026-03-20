@@ -20,14 +20,10 @@ import com.sc.ares.features.invoice.entity.InvoiceStatus;
 import com.sc.ares.features.invoice.repository.InvoiceRepository;
 import com.sc.ares.features.item.entity.Item;
 import com.sc.ares.features.item.repository.ItemRepository;
-import com.sc.ares.features.payment.repository.InvoicePaidAmountProjection;
-import com.sc.ares.features.payment.repository.PaymentRepository;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -53,7 +49,7 @@ public class InvoiceService {
     private final CompanyRepository companyRepository;
     private final ClientRepository clientRepository;
     private final ItemRepository itemRepository;
-    private final PaymentRepository paymentRepository;
+    private final InvoicePaymentStateService invoicePaymentStateService;
     private final InvoiceAccessService invoiceAccessService;
 
     public InvoiceService(
@@ -61,14 +57,14 @@ public class InvoiceService {
         CompanyRepository companyRepository,
         ClientRepository clientRepository,
         ItemRepository itemRepository,
-        PaymentRepository paymentRepository,
+        InvoicePaymentStateService invoicePaymentStateService,
         InvoiceAccessService invoiceAccessService
     ) {
         this.invoiceRepository = invoiceRepository;
         this.companyRepository = companyRepository;
         this.clientRepository = clientRepository;
         this.itemRepository = itemRepository;
-        this.paymentRepository = paymentRepository;
+        this.invoicePaymentStateService = invoicePaymentStateService;
         this.invoiceAccessService = invoiceAccessService;
     }
 
@@ -90,7 +86,7 @@ public class InvoiceService {
             normalizeSearch(search),
             parseSort(sort)
         );
-        Map<UUID, BigDecimal> paidAmounts = getPaidAmounts(invoices);
+        Map<UUID, BigDecimal> paidAmounts = invoicePaymentStateService.getPaidAmounts(invoices);
         InvoicePaymentStatus requestedPaymentStatus = parseOptionalPaymentStatus(paymentStatus);
         List<InvoiceSummaryResponse> filteredItems = invoices.stream()
             .map(invoice -> toSummaryResponse(invoice, paidAmounts))
@@ -114,7 +110,7 @@ public class InvoiceService {
     public InvoiceResponse getInvoice(UUID invoiceId) {
         UUID companyId = invoiceAccessService.getRequiredReadableCompanyId();
         Invoice invoice = getRequiredInvoice(invoiceId, companyId);
-        return toResponse(invoice, paidAmount(invoice));
+        return toResponse(invoice, invoicePaymentStateService.getPaidAmount(invoice));
     }
 
     @Transactional
@@ -147,7 +143,7 @@ public class InvoiceService {
         invoice.replaceLines(draft.lines());
 
         Invoice savedInvoice = invoiceRepository.save(invoice);
-        return toResponse(savedInvoice, paidAmount(savedInvoice));
+        return toResponse(savedInvoice, invoicePaymentStateService.getPaidAmount(savedInvoice));
     }
 
     @Transactional
@@ -173,7 +169,7 @@ public class InvoiceService {
         invoice.replaceLines(draft.lines());
 
         Invoice savedInvoice = invoiceRepository.save(invoice);
-        return toResponse(savedInvoice, paidAmount(savedInvoice));
+        return toResponse(savedInvoice, invoicePaymentStateService.getPaidAmount(savedInvoice));
     }
 
     @Transactional
@@ -185,7 +181,7 @@ public class InvoiceService {
         invoice.issue();
 
         Invoice savedInvoice = invoiceRepository.save(invoice);
-        return toResponse(savedInvoice, paidAmount(savedInvoice));
+        return toResponse(savedInvoice, invoicePaymentStateService.getPaidAmount(savedInvoice));
     }
 
     private Company getWritableCompany() {
@@ -272,7 +268,7 @@ public class InvoiceService {
 
     private InvoiceSummaryResponse toSummaryResponse(Invoice invoice, Map<UUID, BigDecimal> paidAmounts) {
         BigDecimal paidAmount = paidAmounts.getOrDefault(invoice.getId(), money(BigDecimal.ZERO));
-        InvoicePaymentStatus paymentStatus = derivePaymentStatus(invoice, paidAmount);
+        InvoicePaymentStatus paymentStatus = invoicePaymentStateService.derivePaymentStatus(invoice, paidAmount);
 
         return new InvoiceSummaryResponse(
             invoice.getId(),
@@ -288,12 +284,12 @@ public class InvoiceService {
             invoice.getTotal(),
             paymentStatus.name(),
             paidAmount,
-            outstandingAmount(invoice, paidAmount)
+            invoicePaymentStateService.getOutstandingAmount(invoice, paidAmount)
         );
     }
 
     private InvoiceResponse toResponse(Invoice invoice, BigDecimal paidAmount) {
-        InvoicePaymentStatus paymentStatus = derivePaymentStatus(invoice, paidAmount);
+        InvoicePaymentStatus paymentStatus = invoicePaymentStateService.derivePaymentStatus(invoice, paidAmount);
 
         return new InvoiceResponse(
             invoice.getId(),
@@ -310,51 +306,9 @@ public class InvoiceService {
             invoice.getTotal(),
             paymentStatus.name(),
             paidAmount,
-            outstandingAmount(invoice, paidAmount),
+            invoicePaymentStateService.getOutstandingAmount(invoice, paidAmount),
             invoice.getLines().stream().map(this::toLineResponse).toList()
         );
-    }
-
-    private Map<UUID, BigDecimal> getPaidAmounts(List<Invoice> invoices) {
-        if (invoices.isEmpty()) {
-            return Collections.emptyMap();
-        }
-
-        Map<UUID, BigDecimal> paidAmounts = new HashMap<>();
-
-        for (InvoicePaidAmountProjection projection : paymentRepository.sumAmountsByInvoiceIds(
-            invoices.stream().map(Invoice::getId).toList()
-        )) {
-            paidAmounts.put(projection.getInvoiceId(), money(projection.getPaidAmount()));
-        }
-
-        return paidAmounts;
-    }
-
-    private BigDecimal paidAmount(Invoice invoice) {
-        return money(paymentRepository.sumAmountByInvoiceIdAndCompanyId(invoice.getId(), invoice.getCompany().getId()));
-    }
-
-    private BigDecimal outstandingAmount(Invoice invoice, BigDecimal paidAmount) {
-        BigDecimal outstandingAmount = money(invoice.getTotal().subtract(paidAmount));
-
-        if (outstandingAmount.signum() < 0) {
-            return money(BigDecimal.ZERO);
-        }
-
-        return outstandingAmount;
-    }
-
-    private InvoicePaymentStatus derivePaymentStatus(Invoice invoice, BigDecimal paidAmount) {
-        if (invoice.getStatus() == InvoiceStatus.DRAFT || paidAmount.compareTo(BigDecimal.ZERO) == 0) {
-            return InvoicePaymentStatus.UNPAID;
-        }
-
-        if (paidAmount.compareTo(invoice.getTotal()) >= 0) {
-            return InvoicePaymentStatus.PAID;
-        }
-
-        return InvoicePaymentStatus.PARTIALLY_PAID;
     }
 
     private boolean matchesPaymentStatus(InvoiceSummaryResponse summary, InvoicePaymentStatus paymentStatus) {
