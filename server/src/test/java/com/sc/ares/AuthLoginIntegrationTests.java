@@ -34,6 +34,7 @@ import com.sc.ares.features.company.entity.CompanyStatus;
 import com.sc.ares.features.company.repository.CompanyRepository;
 import com.sc.ares.features.invoice.repository.InvoiceRepository;
 import com.sc.ares.features.item.repository.ItemRepository;
+import com.sc.ares.features.payment.repository.PaymentRepository;
 import com.sc.ares.features.user.entity.AppUser;
 import com.sc.ares.features.user.entity.UserStatus;
 import com.sc.ares.features.user.repository.UserRepository;
@@ -75,6 +76,9 @@ class AuthLoginIntegrationTests {
     private ItemRepository itemRepository;
 
     @Autowired
+    private PaymentRepository paymentRepository;
+
+    @Autowired
     private PasswordEncoder passwordEncoder;
 
     private Company activeCompany;
@@ -86,6 +90,7 @@ class AuthLoginIntegrationTests {
     void setUp() {
         refreshTokenRepository.deleteAll();
         userRoleRepository.deleteAll();
+        paymentRepository.deleteAll();
         invoiceRepository.deleteAll();
         clientRepository.deleteAll();
         itemRepository.deleteAll();

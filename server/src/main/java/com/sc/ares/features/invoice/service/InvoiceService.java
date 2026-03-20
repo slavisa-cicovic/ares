@@ -19,10 +19,14 @@ import com.sc.ares.features.invoice.entity.InvoiceStatus;
 import com.sc.ares.features.invoice.repository.InvoiceRepository;
 import com.sc.ares.features.item.entity.Item;
 import com.sc.ares.features.item.repository.ItemRepository;
+import com.sc.ares.features.payment.repository.InvoicePaidAmountProjection;
+import com.sc.ares.features.payment.repository.PaymentRepository;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -50,6 +54,7 @@ public class InvoiceService {
     private final CompanyRepository companyRepository;
     private final ClientRepository clientRepository;
     private final ItemRepository itemRepository;
+    private final PaymentRepository paymentRepository;
     private final InvoiceAccessService invoiceAccessService;
 
     public InvoiceService(
@@ -57,12 +62,14 @@ public class InvoiceService {
         CompanyRepository companyRepository,
         ClientRepository clientRepository,
         ItemRepository itemRepository,
+        PaymentRepository paymentRepository,
         InvoiceAccessService invoiceAccessService
     ) {
         this.invoiceRepository = invoiceRepository;
         this.companyRepository = companyRepository;
         this.clientRepository = clientRepository;
         this.itemRepository = itemRepository;
+        this.paymentRepository = paymentRepository;
         this.invoiceAccessService = invoiceAccessService;
     }
 
@@ -87,9 +94,10 @@ public class InvoiceService {
             normalizeSearch(search),
             pageRequest
         );
+        Map<UUID, BigDecimal> paidAmounts = getPaidAmounts(resultPage.getContent());
 
         return new PagedResponse<>(
-            resultPage.getContent().stream().map(this::toSummaryResponse).toList(),
+            resultPage.getContent().stream().map(invoice -> toSummaryResponse(invoice, paidAmounts)).toList(),
             resultPage.getNumber(),
             resultPage.getSize(),
             resultPage.getTotalElements(),
@@ -100,7 +108,8 @@ public class InvoiceService {
     @Transactional(readOnly = true)
     public InvoiceResponse getInvoice(UUID invoiceId) {
         UUID companyId = invoiceAccessService.getRequiredReadableCompanyId();
-        return toResponse(getRequiredInvoice(invoiceId, companyId));
+        Invoice invoice = getRequiredInvoice(invoiceId, companyId);
+        return toResponse(invoice, paidAmount(invoice));
     }
 
     @Transactional
@@ -132,7 +141,8 @@ public class InvoiceService {
         );
         invoice.replaceLines(draft.lines());
 
-        return toResponse(invoiceRepository.save(invoice));
+        Invoice savedInvoice = invoiceRepository.save(invoice);
+        return toResponse(savedInvoice, paidAmount(savedInvoice));
     }
 
     @Transactional
@@ -157,7 +167,8 @@ public class InvoiceService {
         );
         invoice.replaceLines(draft.lines());
 
-        return toResponse(invoiceRepository.save(invoice));
+        Invoice savedInvoice = invoiceRepository.save(invoice);
+        return toResponse(savedInvoice, paidAmount(savedInvoice));
     }
 
     @Transactional
@@ -168,7 +179,8 @@ public class InvoiceService {
 
         invoice.issue();
 
-        return toResponse(invoiceRepository.save(invoice));
+        Invoice savedInvoice = invoiceRepository.save(invoice);
+        return toResponse(savedInvoice, paidAmount(savedInvoice));
     }
 
     private Company getWritableCompany() {
@@ -253,7 +265,9 @@ public class InvoiceService {
             .orElseThrow(() -> new ResourceNotFoundException("Item not found."));
     }
 
-    private InvoiceSummaryResponse toSummaryResponse(Invoice invoice) {
+    private InvoiceSummaryResponse toSummaryResponse(Invoice invoice, Map<UUID, BigDecimal> paidAmounts) {
+        BigDecimal paidAmount = paidAmounts.getOrDefault(invoice.getId(), money(BigDecimal.ZERO));
+
         return new InvoiceSummaryResponse(
             invoice.getId(),
             invoice.getInvoiceNumber(),
@@ -265,11 +279,13 @@ public class InvoiceService {
             invoice.getStatus().name(),
             invoice.getSubtotal(),
             invoice.getTaxTotal(),
-            invoice.getTotal()
+            invoice.getTotal(),
+            paidAmount,
+            outstandingAmount(invoice, paidAmount)
         );
     }
 
-    private InvoiceResponse toResponse(Invoice invoice) {
+    private InvoiceResponse toResponse(Invoice invoice, BigDecimal paidAmount) {
         return new InvoiceResponse(
             invoice.getId(),
             invoice.getInvoiceNumber(),
@@ -283,8 +299,40 @@ public class InvoiceService {
             invoice.getSubtotal(),
             invoice.getTaxTotal(),
             invoice.getTotal(),
+            paidAmount,
+            outstandingAmount(invoice, paidAmount),
             invoice.getLines().stream().map(this::toLineResponse).toList()
         );
+    }
+
+    private Map<UUID, BigDecimal> getPaidAmounts(List<Invoice> invoices) {
+        if (invoices.isEmpty()) {
+            return Collections.emptyMap();
+        }
+
+        Map<UUID, BigDecimal> paidAmounts = new HashMap<>();
+
+        for (InvoicePaidAmountProjection projection : paymentRepository.sumAmountsByInvoiceIds(
+            invoices.stream().map(Invoice::getId).toList()
+        )) {
+            paidAmounts.put(projection.getInvoiceId(), money(projection.getPaidAmount()));
+        }
+
+        return paidAmounts;
+    }
+
+    private BigDecimal paidAmount(Invoice invoice) {
+        return money(paymentRepository.sumAmountByInvoiceIdAndCompanyId(invoice.getId(), invoice.getCompany().getId()));
+    }
+
+    private BigDecimal outstandingAmount(Invoice invoice, BigDecimal paidAmount) {
+        BigDecimal outstandingAmount = money(invoice.getTotal().subtract(paidAmount));
+
+        if (outstandingAmount.signum() < 0) {
+            return money(BigDecimal.ZERO);
+        }
+
+        return outstandingAmount;
     }
 
     private InvoiceLineResponse toLineResponse(InvoiceLine line) {

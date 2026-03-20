@@ -15,6 +15,8 @@ public record InvoiceSummaryResponse(
     String status,
     BigDecimal subtotal,
     BigDecimal taxTotal,
-    BigDecimal total
+    BigDecimal total,
+    BigDecimal paidAmount,
+    BigDecimal outstandingAmount
 ) {
 }

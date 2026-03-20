@@ -18,6 +18,8 @@ public record InvoiceResponse(
     BigDecimal subtotal,
     BigDecimal taxTotal,
     BigDecimal total,
+    BigDecimal paidAmount,
+    BigDecimal outstandingAmount,
     List<InvoiceLineResponse> lines
 ) {
 }
