@@ -101,6 +101,8 @@ export type ListInvoicesParams = {
   status?: InvoiceStatus;
   paymentStatus?: InvoicePaymentStatus;
   search?: string;
+  from?: string;
+  to?: string;
 };
 
 export type UpsertInvoiceLinePayload = {

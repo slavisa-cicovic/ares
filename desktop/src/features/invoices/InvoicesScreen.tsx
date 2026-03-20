@@ -119,6 +119,8 @@ export function InvoicesScreen() {
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<"" | InvoiceStatus>("");
   const [paymentStatus, setPaymentStatus] = useState<"" | InvoicePaymentStatus>("");
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
   const [reloadKey, setReloadKey] = useState(0);
   const [pageData, setPageData] = useState<PagedResponse<InvoiceSummary>>(emptyPage);
   const [isLoading, setIsLoading] = useState(true);
@@ -139,6 +141,7 @@ export function InvoicesScreen() {
   const rows = pageData.items;
   const totalElements = pageData.totalElements;
   const emptyRowsCount = emptyRows(table.page, table.rowsPerPage, rows.length);
+  const hasInvalidDateRange = Boolean(from && to && from > to);
 
   function blurActiveElement() {
     if (document.activeElement instanceof HTMLElement) {
@@ -157,13 +160,24 @@ export function InvoicesScreen() {
     setIsLoading(true);
     setError(null);
 
+    if (hasInvalidDateRange) {
+      setError("From date must be earlier than or equal to To date.");
+      setPageData(emptyPage);
+      setIsLoading(false);
+      return () => {
+        active = false;
+      };
+    }
+
     void getInvoices({
       page: table.page,
       size: table.rowsPerPage,
       sort: toSortValue(table.orderBy, table.order),
       status: status || undefined,
       paymentStatus: paymentStatus || undefined,
-      search
+      search,
+      from: from || undefined,
+      to: to || undefined
     })
       .then((response) => {
         if (active) {
@@ -189,7 +203,7 @@ export function InvoicesScreen() {
     return () => {
       active = false;
     };
-  }, [getInvoices, paymentStatus, reloadKey, search, status, table.order, table.orderBy, table.page, table.rowsPerPage]);
+  }, [from, getInvoices, hasInvalidDateRange, paymentStatus, reloadKey, search, status, table.order, table.orderBy, table.page, table.rowsPerPage, to]);
 
   return (
     <Stack spacing={3}>
@@ -211,15 +225,15 @@ export function InvoicesScreen() {
             justifyContent="space-between"
             spacing={2}
           >
-            <Stack direction={{ xs: "column", md: "row" }} spacing={2} sx={{ flex: 1 }}>
+            <Stack direction={{ xs: "column", md: "row" }} spacing={2} sx={{ flex: 1, flexWrap: "wrap" }}>
               <TextField
-                fullWidth
                 label="Search"
                 onChange={(event) => {
                   setSearch(event.target.value);
                   table.onResetPage();
                 }}
                 placeholder="Search by invoice number or client"
+                sx={{ minWidth: 280, maxWidth: 360, width: "100%" }}
                 value={search}
               />
 
@@ -257,6 +271,28 @@ export function InvoicesScreen() {
                   <MenuItem value="PAID">Paid</MenuItem>
                 </Select>
               </FormControl>
+
+              <TextField
+                InputLabelProps={{ shrink: true }}
+                label="From"
+                onChange={(event) => {
+                  setFrom(event.target.value);
+                  table.onResetPage();
+                }}
+                type="date"
+                value={from}
+              />
+
+              <TextField
+                InputLabelProps={{ shrink: true }}
+                label="To"
+                onChange={(event) => {
+                  setTo(event.target.value);
+                  table.onResetPage();
+                }}
+                type="date"
+                value={to}
+              />
             </Stack>
 
             <Stack direction="row" spacing={1.5}>

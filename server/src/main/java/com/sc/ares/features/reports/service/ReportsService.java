@@ -21,6 +21,9 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class ReportsService {
 
+    private static final LocalDate MIN_FILTER_DATE = LocalDate.of(1900, 1, 1);
+    private static final LocalDate MAX_FILTER_DATE = LocalDate.of(2999, 12, 31);
+
     private final InvoiceRepository invoiceRepository;
     private final InvoiceAccessService invoiceAccessService;
     private final InvoicePaymentStateService invoicePaymentStateService;
@@ -47,6 +50,10 @@ public class ReportsService {
             companyId,
             null,
             "",
+            from != null,
+            normalizeFromFilter(from),
+            to != null,
+            normalizeToFilter(to),
             Sort.by(Sort.Direction.DESC, "issueDate")
         ).stream()
             .filter(invoice -> matchesDateRange(invoice, from, to))
@@ -113,6 +120,14 @@ public class ReportsService {
         if (from != null && to != null && to.isBefore(from)) {
             throw new ApiBadRequestException("Report date range is invalid.");
         }
+    }
+
+    private LocalDate normalizeFromFilter(LocalDate from) {
+        return from != null ? from : MIN_FILTER_DATE;
+    }
+
+    private LocalDate normalizeToFilter(LocalDate to) {
+        return to != null ? to : MAX_FILTER_DATE;
     }
 
     private boolean matchesDateRange(Invoice invoice, LocalDate from, LocalDate to) {

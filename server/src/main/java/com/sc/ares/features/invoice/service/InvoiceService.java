@@ -39,6 +39,8 @@ public class InvoiceService {
     private static final int DEFAULT_PAGE_SIZE = 20;
     private static final int MAX_PAGE_SIZE = 100;
     private static final BigDecimal ONE_HUNDRED = new BigDecimal("100.00");
+    private static final LocalDate MIN_FILTER_DATE = LocalDate.of(1900, 1, 1);
+    private static final LocalDate MAX_FILTER_DATE = LocalDate.of(2999, 12, 31);
     private static final Map<String, String> SORT_FIELD_MAPPING = Map.of(
         "invoiceNumber", "invoiceNumber",
         "issueDate", "issueDate",
@@ -80,15 +82,22 @@ public class InvoiceService {
         String sort,
         String status,
         String paymentStatus,
-        String search
+        String search,
+        LocalDate from,
+        LocalDate to
     ) {
         UUID companyId = invoiceAccessService.getRequiredReadableCompanyId();
+        validateDateRange(from, to);
         int normalizedPage = normalizePage(page);
         int normalizedSize = normalizeSize(size);
         List<Invoice> invoices = invoiceRepository.findAllByCompanyIdAndFilters(
             companyId,
             parseOptionalStatus(status),
             normalizeSearch(search),
+            from != null,
+            normalizeFromFilter(from),
+            to != null,
+            normalizeToFilter(to),
             parseSort(sort)
         );
         Map<UUID, BigDecimal> paidAmounts = invoicePaymentStateService.getPaidAmounts(invoices);
@@ -246,6 +255,20 @@ public class InvoiceService {
         if (invoiceRepository.findByOriginalInvoiceIdAndCompanyIdAndDeletedAtIsNull(invoice.getId(), companyId).isPresent()) {
             throw new BusinessConflictException("Credit note already exists for this invoice.");
         }
+    }
+
+    private void validateDateRange(LocalDate from, LocalDate to) {
+        if (from != null && to != null && from.isAfter(to)) {
+            throw new ApiBadRequestException("Invalid invoice date range.");
+        }
+    }
+
+    private LocalDate normalizeFromFilter(LocalDate from) {
+        return from != null ? from : MIN_FILTER_DATE;
+    }
+
+    private LocalDate normalizeToFilter(LocalDate to) {
+        return to != null ? to : MAX_FILTER_DATE;
     }
 
     private Client getRequiredClient(UUID clientId, UUID companyId) {

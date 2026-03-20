@@ -2,6 +2,7 @@ package com.sc.ares.features.invoice.repository;
 
 import com.sc.ares.features.invoice.entity.Invoice;
 import com.sc.ares.features.invoice.entity.InvoiceStatus;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -26,6 +27,8 @@ public interface InvoiceRepository extends JpaRepository<Invoice, UUID> {
         where invoice.company.id = :companyId
           and invoice.deletedAt is null
           and (:status is null or invoice.status = :status)
+          and (:hasFrom = false or invoice.issueDate >= :from)
+          and (:hasTo = false or invoice.issueDate <= :to)
           and (
               :search = ''
               or upper(invoice.invoiceNumber) like upper(concat('%', :search, '%'))
@@ -36,6 +39,10 @@ public interface InvoiceRepository extends JpaRepository<Invoice, UUID> {
         UUID companyId,
         InvoiceStatus status,
         String search,
+        boolean hasFrom,
+        LocalDate from,
+        boolean hasTo,
+        LocalDate to,
         Sort sort
     );
 }

@@ -7,6 +7,7 @@ import com.sc.ares.features.invoice.dto.UpsertInvoiceRequest;
 import com.sc.ares.features.invoice.service.InvoicePdfService;
 import com.sc.ares.features.invoice.service.InvoiceService;
 import jakarta.validation.Valid;
+import java.time.LocalDate;
 import java.util.UUID;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
@@ -42,9 +43,11 @@ public class InvoiceController {
         @RequestParam(defaultValue = "issueDate,desc") String sort,
         @RequestParam(required = false) String status,
         @RequestParam(required = false) String paymentStatus,
-        @RequestParam(required = false) String search
+        @RequestParam(required = false) String search,
+        @RequestParam(required = false) LocalDate from,
+        @RequestParam(required = false) LocalDate to
     ) {
-        return invoiceService.listInvoices(page, size, sort, status, paymentStatus, search);
+        return invoiceService.listInvoices(page, size, sort, status, paymentStatus, search, from, to);
     }
 
     @GetMapping("/{invoiceId}")

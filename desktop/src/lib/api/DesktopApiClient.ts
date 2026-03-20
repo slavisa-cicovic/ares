@@ -210,6 +210,14 @@ export class DesktopApiClient {
       query.set("search", params.search.trim());
     }
 
+    if (params.from) {
+      query.set("from", params.from);
+    }
+
+    if (params.to) {
+      query.set("to", params.to);
+    }
+
     return this.request<PagedResponse<InvoiceSummary>>(`/invoices?${query.toString()}`);
   }
 

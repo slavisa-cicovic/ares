@@ -231,6 +231,51 @@ class InvoiceModuleIntegrationTests {
     }
 
     @Test
+    void invoiceListShouldFilterByIssueDateRange() throws Exception {
+        String token = login("admin.one@local.ares", "ares-test").get("accessToken").asText();
+
+        mockMvc.perform(
+                post("/invoices")
+                    .header("Authorization", bearer(token))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(invoicePayload(companyOneClient.getId(), companyOneItem.getId(), "2026-03-10", "2026-03-17"))
+            )
+            .andExpect(status().isCreated());
+
+        mockMvc.perform(
+                post("/invoices")
+                    .header("Authorization", bearer(token))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(invoicePayload(companyOneClient.getId(), companyOneItem.getId(), "2026-03-20", "2026-03-27"))
+            )
+            .andExpect(status().isCreated());
+
+        mockMvc.perform(
+                get("/invoices")
+                    .header("Authorization", bearer(token))
+                    .param("from", "2026-03-15")
+                    .param("to", "2026-03-31")
+            )
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.items.length()").value(1))
+            .andExpect(jsonPath("$.items[0].invoiceNumber").value("2026-0002"));
+    }
+
+    @Test
+    void invoiceListShouldRejectInvalidIssueDateRange() throws Exception {
+        String token = login("admin.one@local.ares", "ares-test").get("accessToken").asText();
+
+        mockMvc.perform(
+                get("/invoices")
+                    .header("Authorization", bearer(token))
+                    .param("from", "2026-03-31")
+                    .param("to", "2026-03-01")
+            )
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.message").value("Invalid invoice date range."));
+    }
+
+    @Test
     void crossTenantDetailShouldReturnNotFound() throws Exception {
         String tokenOne = login("admin.one@local.ares", "ares-test").get("accessToken").asText();
         String tokenTwo = login("admin.two@local.ares", "ares-test").get("accessToken").asText();
