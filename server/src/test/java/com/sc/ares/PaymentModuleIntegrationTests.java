@@ -154,8 +154,128 @@ class PaymentModuleIntegrationTests {
                     .header("Authorization", bearer(token))
             )
             .andExpect(status().isOk())
+            .andExpect(jsonPath("$.paymentStatus").value("PARTIALLY_PAID"))
             .andExpect(jsonPath("$.paidAmount").value(120.00))
             .andExpect(jsonPath("$.outstandingAmount").value(360.00));
+    }
+
+    @Test
+    void invoiceDetailShouldReturnUnpaidForIssuedInvoiceWithoutPayments() throws Exception {
+        String token = login("admin.one@local.ares", "ares-test").get("accessToken").asText();
+        JsonNode invoice = createAndIssueInvoice(token, companyOneClient.getId(), companyOneItem.getId());
+
+        mockMvc.perform(
+                get("/invoices/{invoiceId}", invoice.get("id").asText())
+                    .header("Authorization", bearer(token))
+            )
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.paymentStatus").value("UNPAID"))
+            .andExpect(jsonPath("$.paidAmount").value(0.00))
+            .andExpect(jsonPath("$.outstandingAmount").value(480.00));
+    }
+
+    @Test
+    void invoiceDetailShouldReturnPaidWhenFullySettled() throws Exception {
+        String token = login("admin.one@local.ares", "ares-test").get("accessToken").asText();
+        JsonNode invoice = createAndIssueInvoice(token, companyOneClient.getId(), companyOneItem.getId());
+
+        mockMvc.perform(
+                post("/invoices/{invoiceId}/payments", invoice.get("id").asText())
+                    .header("Authorization", bearer(token))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(paymentPayload("2026-03-22", "480.00", "Full payment"))
+            )
+            .andExpect(status().isCreated());
+
+        mockMvc.perform(
+                get("/invoices/{invoiceId}", invoice.get("id").asText())
+                    .header("Authorization", bearer(token))
+            )
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.paymentStatus").value("PAID"))
+            .andExpect(jsonPath("$.paidAmount").value(480.00))
+            .andExpect(jsonPath("$.outstandingAmount").value(0.00));
+    }
+
+    @Test
+    void invoiceDetailShouldReturnUnpaidForDraftInvoice() throws Exception {
+        String token = login("admin.one@local.ares", "ares-test").get("accessToken").asText();
+        JsonNode invoice = createInvoice(token, companyOneClient.getId(), companyOneItem.getId());
+
+        mockMvc.perform(
+                get("/invoices/{invoiceId}", invoice.get("id").asText())
+                    .header("Authorization", bearer(token))
+            )
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.status").value("DRAFT"))
+            .andExpect(jsonPath("$.paymentStatus").value("UNPAID"));
+    }
+
+    @Test
+    void invoiceListShouldFilterByPaymentStatus() throws Exception {
+        String token = login("admin.one@local.ares", "ares-test").get("accessToken").asText();
+        JsonNode unpaidInvoice = createAndIssueInvoice(token, companyOneClient.getId(), companyOneItem.getId());
+        JsonNode partialInvoice = createAndIssueInvoice(token, companyOneClient.getId(), companyOneItem.getId());
+        JsonNode paidInvoice = createAndIssueInvoice(token, companyOneClient.getId(), companyOneItem.getId());
+
+        mockMvc.perform(
+                post("/invoices/{invoiceId}/payments", partialInvoice.get("id").asText())
+                    .header("Authorization", bearer(token))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(paymentPayload("2026-03-22", "100.00", "Partial"))
+            )
+            .andExpect(status().isCreated());
+
+        mockMvc.perform(
+                post("/invoices/{invoiceId}/payments", paidInvoice.get("id").asText())
+                    .header("Authorization", bearer(token))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(paymentPayload("2026-03-22", "480.00", "Paid"))
+            )
+            .andExpect(status().isCreated());
+
+        mockMvc.perform(
+                get("/invoices")
+                    .header("Authorization", bearer(token))
+                    .param("paymentStatus", "UNPAID")
+            )
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.items.length()").value(1))
+            .andExpect(jsonPath("$.items[0].id").value(unpaidInvoice.get("id").asText()))
+            .andExpect(jsonPath("$.items[0].paymentStatus").value("UNPAID"));
+
+        mockMvc.perform(
+                get("/invoices")
+                    .header("Authorization", bearer(token))
+                    .param("paymentStatus", "PARTIALLY_PAID")
+            )
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.items.length()").value(1))
+            .andExpect(jsonPath("$.items[0].id").value(partialInvoice.get("id").asText()))
+            .andExpect(jsonPath("$.items[0].paymentStatus").value("PARTIALLY_PAID"));
+
+        mockMvc.perform(
+                get("/invoices")
+                    .header("Authorization", bearer(token))
+                    .param("paymentStatus", "PAID")
+            )
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.items.length()").value(1))
+            .andExpect(jsonPath("$.items[0].id").value(paidInvoice.get("id").asText()))
+            .andExpect(jsonPath("$.items[0].paymentStatus").value("PAID"));
+    }
+
+    @Test
+    void invalidPaymentStatusFilterShouldReturnBadRequest() throws Exception {
+        String token = login("admin.one@local.ares", "ares-test").get("accessToken").asText();
+
+        mockMvc.perform(
+                get("/invoices")
+                    .header("Authorization", bearer(token))
+                    .param("paymentStatus", "UNKNOWN")
+            )
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.message").value("Invalid invoice payment status."));
     }
 
     @Test

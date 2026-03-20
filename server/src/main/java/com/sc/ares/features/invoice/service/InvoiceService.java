@@ -15,6 +15,7 @@ import com.sc.ares.features.invoice.dto.UpsertInvoiceLineRequest;
 import com.sc.ares.features.invoice.dto.UpsertInvoiceRequest;
 import com.sc.ares.features.invoice.entity.Invoice;
 import com.sc.ares.features.invoice.entity.InvoiceLine;
+import com.sc.ares.features.invoice.entity.InvoicePaymentStatus;
 import com.sc.ares.features.invoice.entity.InvoiceStatus;
 import com.sc.ares.features.invoice.repository.InvoiceRepository;
 import com.sc.ares.features.item.entity.Item;
@@ -30,8 +31,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -79,29 +78,35 @@ public class InvoiceService {
         int size,
         String sort,
         String status,
+        String paymentStatus,
         String search
     ) {
         UUID companyId = invoiceAccessService.getRequiredReadableCompanyId();
-        PageRequest pageRequest = PageRequest.of(
-            normalizePage(page),
-            normalizeSize(size),
-            parseSort(sort)
-        );
-
-        Page<Invoice> resultPage = invoiceRepository.findPageByCompanyIdAndFilters(
+        int normalizedPage = normalizePage(page);
+        int normalizedSize = normalizeSize(size);
+        List<Invoice> invoices = invoiceRepository.findAllByCompanyIdAndFilters(
             companyId,
             parseOptionalStatus(status),
             normalizeSearch(search),
-            pageRequest
+            parseSort(sort)
         );
-        Map<UUID, BigDecimal> paidAmounts = getPaidAmounts(resultPage.getContent());
+        Map<UUID, BigDecimal> paidAmounts = getPaidAmounts(invoices);
+        InvoicePaymentStatus requestedPaymentStatus = parseOptionalPaymentStatus(paymentStatus);
+        List<InvoiceSummaryResponse> filteredItems = invoices.stream()
+            .map(invoice -> toSummaryResponse(invoice, paidAmounts))
+            .filter(summary -> matchesPaymentStatus(summary, requestedPaymentStatus))
+            .toList();
+        int fromIndex = Math.min(normalizedPage * normalizedSize, filteredItems.size());
+        int toIndex = Math.min(fromIndex + normalizedSize, filteredItems.size());
+        int totalItems = filteredItems.size();
+        int totalPages = totalItems == 0 ? 0 : (int) Math.ceil((double) totalItems / normalizedSize);
 
         return new PagedResponse<>(
-            resultPage.getContent().stream().map(invoice -> toSummaryResponse(invoice, paidAmounts)).toList(),
-            resultPage.getNumber(),
-            resultPage.getSize(),
-            resultPage.getTotalElements(),
-            resultPage.getTotalPages()
+            filteredItems.subList(fromIndex, toIndex),
+            normalizedPage,
+            normalizedSize,
+            totalItems,
+            totalPages
         );
     }
 
@@ -267,6 +272,7 @@ public class InvoiceService {
 
     private InvoiceSummaryResponse toSummaryResponse(Invoice invoice, Map<UUID, BigDecimal> paidAmounts) {
         BigDecimal paidAmount = paidAmounts.getOrDefault(invoice.getId(), money(BigDecimal.ZERO));
+        InvoicePaymentStatus paymentStatus = derivePaymentStatus(invoice, paidAmount);
 
         return new InvoiceSummaryResponse(
             invoice.getId(),
@@ -280,12 +286,15 @@ public class InvoiceService {
             invoice.getSubtotal(),
             invoice.getTaxTotal(),
             invoice.getTotal(),
+            paymentStatus.name(),
             paidAmount,
             outstandingAmount(invoice, paidAmount)
         );
     }
 
     private InvoiceResponse toResponse(Invoice invoice, BigDecimal paidAmount) {
+        InvoicePaymentStatus paymentStatus = derivePaymentStatus(invoice, paidAmount);
+
         return new InvoiceResponse(
             invoice.getId(),
             invoice.getInvoiceNumber(),
@@ -299,6 +308,7 @@ public class InvoiceService {
             invoice.getSubtotal(),
             invoice.getTaxTotal(),
             invoice.getTotal(),
+            paymentStatus.name(),
             paidAmount,
             outstandingAmount(invoice, paidAmount),
             invoice.getLines().stream().map(this::toLineResponse).toList()
@@ -333,6 +343,26 @@ public class InvoiceService {
         }
 
         return outstandingAmount;
+    }
+
+    private InvoicePaymentStatus derivePaymentStatus(Invoice invoice, BigDecimal paidAmount) {
+        if (invoice.getStatus() == InvoiceStatus.DRAFT || paidAmount.compareTo(BigDecimal.ZERO) == 0) {
+            return InvoicePaymentStatus.UNPAID;
+        }
+
+        if (paidAmount.compareTo(invoice.getTotal()) >= 0) {
+            return InvoicePaymentStatus.PAID;
+        }
+
+        return InvoicePaymentStatus.PARTIALLY_PAID;
+    }
+
+    private boolean matchesPaymentStatus(InvoiceSummaryResponse summary, InvoicePaymentStatus paymentStatus) {
+        if (paymentStatus == null) {
+            return true;
+        }
+
+        return paymentStatus.name().equals(summary.paymentStatus());
     }
 
     private InvoiceLineResponse toLineResponse(InvoiceLine line) {
@@ -396,6 +426,18 @@ public class InvoiceService {
             return InvoiceStatus.valueOf(status.trim().toUpperCase());
         } catch (IllegalArgumentException exception) {
             throw new ApiBadRequestException("Invalid invoice status.");
+        }
+    }
+
+    private InvoicePaymentStatus parseOptionalPaymentStatus(String paymentStatus) {
+        if (paymentStatus == null || paymentStatus.isBlank()) {
+            return null;
+        }
+
+        try {
+            return InvoicePaymentStatus.valueOf(paymentStatus.trim().toUpperCase());
+        } catch (IllegalArgumentException exception) {
+            throw new ApiBadRequestException("Invalid invoice payment status.");
         }
     }
 

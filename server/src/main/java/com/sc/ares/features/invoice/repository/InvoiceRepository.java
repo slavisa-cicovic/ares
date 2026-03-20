@@ -2,10 +2,10 @@ package com.sc.ares.features.invoice.repository;
 
 import com.sc.ares.features.invoice.entity.Invoice;
 import com.sc.ares.features.invoice.entity.InvoiceStatus;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
@@ -28,10 +28,10 @@ public interface InvoiceRepository extends JpaRepository<Invoice, UUID> {
               or upper(client.name) like upper(concat('%', :search, '%'))
           )
         """)
-    Page<Invoice> findPageByCompanyIdAndFilters(
+    List<Invoice> findAllByCompanyIdAndFilters(
         UUID companyId,
         InvoiceStatus status,
         String search,
-        Pageable pageable
+        Sort sort
     );
 }

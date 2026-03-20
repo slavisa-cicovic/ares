@@ -18,6 +18,7 @@ public record InvoiceResponse(
     BigDecimal subtotal,
     BigDecimal taxTotal,
     BigDecimal total,
+    String paymentStatus,
     BigDecimal paidAmount,
     BigDecimal outstandingAmount,
     List<InvoiceLineResponse> lines

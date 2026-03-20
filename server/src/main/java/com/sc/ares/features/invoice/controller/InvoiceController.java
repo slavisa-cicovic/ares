@@ -34,9 +34,10 @@ public class InvoiceController {
         @RequestParam(defaultValue = "20") int size,
         @RequestParam(defaultValue = "issueDate,desc") String sort,
         @RequestParam(required = false) String status,
+        @RequestParam(required = false) String paymentStatus,
         @RequestParam(required = false) String search
     ) {
-        return invoiceService.listInvoices(page, size, sort, status, search);
+        return invoiceService.listInvoices(page, size, sort, status, paymentStatus, search);
     }
 
     @GetMapping("/{invoiceId}")
