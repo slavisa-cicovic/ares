@@ -24,7 +24,7 @@ import {
   TextField,
   Typography
 } from "@mui/material";
-import { ConfirmDialog } from "../../components";
+import { ConfirmDialog, FiltersResult, type FilterItem } from "../../components";
 import { emptyRows, useTable } from "../../components/table";
 import { ApiClientError } from "../../lib/api/DesktopApiClient";
 import type {
@@ -75,6 +75,16 @@ function formatMoney(value: number, currency: string): string {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2
   }).format(value)} ${currency}`;
+}
+
+function hasActiveFilters(
+  search: string,
+  status: "" | InvoiceStatus,
+  paymentStatus: "" | InvoicePaymentStatus,
+  from: string,
+  to: string
+): boolean {
+  return Boolean(search || status || paymentStatus || from || to);
 }
 
 function statusColor(status: InvoiceStatus): "warning" | "success" {
@@ -142,6 +152,68 @@ export function InvoicesScreen() {
   const totalElements = pageData.totalElements;
   const emptyRowsCount = emptyRows(table.page, table.rowsPerPage, rows.length);
   const hasInvalidDateRange = Boolean(from && to && from > to);
+  const filters: FilterItem[] = [
+    ...(search
+      ? [
+          {
+            label: "Search",
+            value: search,
+            onRemove: () => {
+              setSearch("");
+              table.onResetPage();
+            }
+          }
+        ]
+      : []),
+    ...(status
+      ? [
+          {
+            label: "Status",
+            value: status,
+            onRemove: () => {
+              setStatus("");
+              table.onResetPage();
+            }
+          }
+        ]
+      : []),
+    ...(paymentStatus
+      ? [
+          {
+            label: "Payment",
+            value: paymentStatus,
+            onRemove: () => {
+              setPaymentStatus("");
+              table.onResetPage();
+            }
+          }
+        ]
+      : []),
+    ...(from
+      ? [
+          {
+            label: "From",
+            value: formatDate(from),
+            onRemove: () => {
+              setFrom("");
+              table.onResetPage();
+            }
+          }
+        ]
+      : []),
+    ...(to
+      ? [
+          {
+            label: "To",
+            value: formatDate(to),
+            onRemove: () => {
+              setTo("");
+              table.onResetPage();
+            }
+          }
+        ]
+      : [])
+  ];
 
   function blurActiveElement() {
     if (document.activeElement instanceof HTMLElement) {
@@ -315,11 +387,20 @@ export function InvoicesScreen() {
             </Stack>
           </Stack>
 
-          {error ? <Alert severity="error">{error}</Alert> : null}
+          <FiltersResult
+            filters={filters}
+            onReset={() => {
+              setSearch("");
+              setStatus("");
+              setPaymentStatus("");
+              setFrom("");
+              setTo("");
+              table.onResetPage();
+            }}
+            total={totalElements}
+          />
 
-          <Typography color="text.secondary" variant="body2">
-            {totalElements} {totalElements === 1 ? "invoice" : "invoices"} in this company
-          </Typography>
+          {error ? <Alert severity="error">{error}</Alert> : null}
 
           <Paper sx={{ overflow: "hidden" }} variant="outlined">
             <TableContainer>
@@ -360,7 +441,7 @@ export function InvoicesScreen() {
                     <TableRow>
                       <TableCell colSpan={headCells.length}>
                         <Typography align="center" color="text.secondary" sx={{ py: 4 }} variant="body2">
-                          {search || status || paymentStatus
+                          {hasActiveFilters(search, status, paymentStatus, from, to)
                             ? "No invoices match the current filters."
                             : "No invoices have been created yet."}
                         </Typography>
