@@ -176,6 +176,38 @@ class ClientModuleIntegrationTests {
     }
 
     @Test
+    void clientListSearchShouldMatchBusinessFieldsBeyondNameAndEmail() throws Exception {
+        String token = login("admin.one@local.ares", "ares-test").get("accessToken").asText();
+
+        mockMvc.perform(
+                get("/clients")
+                    .header("Authorization", bearer(token))
+                    .param("search", "222")
+            )
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.items.length()").value(1))
+            .andExpect(jsonPath("$.items[0].name").value("Acme"));
+
+        mockMvc.perform(
+                get("/clients")
+                    .header("Authorization", bearer(token))
+                    .param("search", "Street 1")
+            )
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.items.length()").value(1))
+            .andExpect(jsonPath("$.items[0].name").value("Acme"));
+
+        mockMvc.perform(
+                get("/clients")
+                    .header("Authorization", bearer(token))
+                    .param("search", "Belgrade")
+            )
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.items.length()").value(1))
+            .andExpect(jsonPath("$.items[0].name").value("Acme"));
+    }
+
+    @Test
     void crossTenantDetailShouldReturnNotFound() throws Exception {
         String token = login("admin.one@local.ares", "ares-test").get("accessToken").asText();
 

@@ -26,6 +26,12 @@ public interface ClientRepository extends JpaRepository<Client, UUID> {
               or upper(client.name) like upper(concat('%', :search, '%'))
               or upper(client.email) like upper(concat('%', :search, '%'))
               or upper(client.pib) like upper(concat('%', :search, '%'))
+              or upper(client.mb) like upper(concat('%', :search, '%'))
+              or upper(client.phone) like upper(concat('%', :search, '%'))
+              or upper(client.address) like upper(concat('%', :search, '%'))
+              or upper(client.city) like upper(concat('%', :search, '%'))
+              or upper(client.postalCode) like upper(concat('%', :search, '%'))
+              or upper(client.country) like upper(concat('%', :search, '%'))
           )
         """)
     Page<Client> findPageByCompanyIdAndFilters(
