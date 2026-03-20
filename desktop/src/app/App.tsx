@@ -4,6 +4,7 @@ import { DashboardScreen } from "../features/dashboard/DashboardScreen";
 import { LoginScreen } from "../features/auth/LoginScreen";
 import { PlaceholderScreen } from "../features/navigation/PlaceholderScreen";
 import { SettingsScreen } from "../features/settings/SettingsScreen";
+import { ClientsScreen } from "../features/clients/ClientsScreen";
 import { loadThemePreference, saveThemePreference, type DesktopTheme } from "../features/settings/themeStorage";
 import { Shell, type AppView } from "./Shell";
 
@@ -42,12 +43,7 @@ function AppContent() {
       {activeView === "settings" ? (
         <SettingsScreen onThemeChange={handleThemeChange} theme={theme} user={state.user} />
       ) : null}
-      {activeView === "clients" ? (
-        <PlaceholderScreen
-          description="Client lists, filters, and forms will move here next."
-          title="Clients"
-        />
-      ) : null}
+      {activeView === "clients" ? <ClientsScreen user={state.user} /> : null}
       {activeView === "items" ? (
         <PlaceholderScreen
           description="Item catalog screens will connect to the existing backend item module."

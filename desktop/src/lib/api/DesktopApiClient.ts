@@ -2,7 +2,10 @@ import type { SessionData, LoginPayload, AuthResponse, AuthenticatedUser } from 
 import type {
   ApiErrorPayload,
   ChangePasswordPayload,
+  ClientSummary,
   CompanyResponse,
+  ListClientsParams,
+  PagedResponse,
   ReportsSummary,
   UpdateCompanyPayload
 } from "./types";
@@ -104,6 +107,24 @@ export class DesktopApiClient {
       method: "POST",
       body: JSON.stringify(payload)
     });
+  }
+
+  async listClients(params: ListClientsParams): Promise<PagedResponse<ClientSummary>> {
+    const query = new URLSearchParams({
+      page: String(params.page),
+      size: String(params.size),
+      sort: params.sort
+    });
+
+    if (params.status) {
+      query.set("status", params.status);
+    }
+
+    if (params.search && params.search.trim()) {
+      query.set("search", params.search.trim());
+    }
+
+    return this.request<PagedResponse<ClientSummary>>(`/clients?${query.toString()}`);
   }
 
   private async request<T>(path: string, init?: RequestInit, retry = true): Promise<T> {
