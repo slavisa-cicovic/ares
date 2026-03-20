@@ -658,6 +658,77 @@ input {
   cursor: pointer;
 }
 
+.custom-dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(19, 25, 31, 0.42);
+  backdrop-filter: blur(6px);
+}
+
+.custom-dialog {
+  display: grid;
+  gap: 18px;
+  width: min(100%, 720px);
+  max-height: min(88vh, 920px);
+  padding: 22px;
+  border-radius: 28px;
+  background: color-mix(in srgb, var(--card-surface) 92%, white 8%);
+  box-shadow: 0 28px 80px rgba(17, 24, 32, 0.28);
+}
+
+.custom-dialog-sm {
+  width: min(100%, 520px);
+}
+
+.custom-dialog-md {
+  width: min(100%, 720px);
+}
+
+.custom-dialog-lg {
+  width: min(100%, 920px);
+}
+
+.custom-dialog-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.custom-dialog-copy {
+  display: grid;
+  gap: 8px;
+}
+
+.custom-dialog-copy h3 {
+  margin: 0;
+  font-size: 28px;
+}
+
+.custom-dialog-copy p {
+  margin: 0;
+  color: color-mix(in srgb, var(--page-text) 64%, transparent);
+}
+
+.custom-dialog-close {
+  flex-shrink: 0;
+}
+
+.custom-dialog-content {
+  overflow: auto;
+}
+
+.custom-dialog-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
 .module-screen {
   display: grid;
   gap: 22px;
