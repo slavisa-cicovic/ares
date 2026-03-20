@@ -137,7 +137,7 @@ class ReportsSummaryIntegrationTests {
     @Test
     void companyAdminShouldGetSummaryForOwnCompany() throws Exception {
         String token = login("admin.one@local.ares", "ares-test").get("accessToken").asText();
-        JsonNode unpaidInvoice = createAndIssueInvoice(token, companyOneClient.getId(), companyOneItem.getId(), "2026-03-01", "2026-03-08");
+        createAndIssueInvoice(token, companyOneClient.getId(), companyOneItem.getId(), "2026-03-01", "2026-03-08");
         JsonNode partialInvoice = createAndIssueInvoice(token, companyOneClient.getId(), companyOneItem.getId(), "2026-03-10", "2026-03-17");
         JsonNode paidInvoice = createAndIssueInvoice(token, companyOneClient.getId(), companyOneItem.getId(), "2026-03-15", "2026-03-22");
 
