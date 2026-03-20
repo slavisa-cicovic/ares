@@ -55,6 +55,7 @@ export default function RHFNumberField({
       name={name}
       render={({ field, fieldState: { error } }) => {
         const normalizedValue = formatDigits(toDigitString(field.value), decimals);
+        const resolvedHelperText = error ? error.message : (helperText ?? "\u00A0");
 
         return (
           <label className={`field rhf-field${className ? ` ${className}` : ""}`}>
@@ -79,11 +80,9 @@ export default function RHFNumberField({
               {suffix ? <span className="rhf-input-suffix">{suffix}</span> : null}
             </div>
 
-            {error?.message || helperText ? (
-              <small className={`rhf-helper-text${error ? " error" : ""}`}>
-                {error ? error.message : helperText}
-              </small>
-            ) : null}
+            <small className={`rhf-helper-text${error ? " error" : ""}`}>
+              {resolvedHelperText}
+            </small>
           </label>
         );
       }}

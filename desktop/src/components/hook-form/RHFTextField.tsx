@@ -36,6 +36,7 @@ export default function RHFTextField({
       name={name}
       render={({ field, fieldState: { error } }) => {
         const normalizedValue = field.value == null ? "" : String(field.value);
+        const resolvedHelperText = error ? error.message : (helperText ?? "\u00A0");
 
         return (
           <label className={`field rhf-field${className ? ` ${className}` : ""}`}>
@@ -67,11 +68,9 @@ export default function RHFTextField({
               />
             )}
 
-            {error?.message || helperText ? (
-              <small className={`rhf-helper-text${error ? " error" : ""}`}>
-                {error ? error.message : helperText}
-              </small>
-            ) : null}
+            <small className={`rhf-helper-text${error ? " error" : ""}`}>
+              {resolvedHelperText}
+            </small>
           </label>
         );
       }}

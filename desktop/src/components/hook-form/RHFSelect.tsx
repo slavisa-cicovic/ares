@@ -26,28 +26,30 @@ export default function RHFSelect({
     <Controller
       control={control}
       name={name}
-      render={({ field, fieldState: { error } }) => (
-        <label className={`field rhf-field${className ? ` ${className}` : ""}`}>
-          {label ? <span>{label}</span> : null}
+      render={({ field, fieldState: { error } }) => {
+        const resolvedHelperText = error ? error.message : (helperText ?? "\u00A0");
 
-          <select
-            disabled={disabled}
-            onBlur={field.onBlur}
-            onChange={(event) => field.onChange(event.target.value)}
-            ref={field.ref}
-            required={required}
-            value={field.value ?? ""}
-          >
-            {children}
-          </select>
+        return (
+          <label className={`field rhf-field${className ? ` ${className}` : ""}`}>
+            {label ? <span>{label}</span> : null}
 
-          {error?.message || helperText ? (
+            <select
+              disabled={disabled}
+              onBlur={field.onBlur}
+              onChange={(event) => field.onChange(event.target.value)}
+              ref={field.ref}
+              required={required}
+              value={field.value ?? ""}
+            >
+              {children}
+            </select>
+
             <small className={`rhf-helper-text${error ? " error" : ""}`}>
-              {error ? error.message : helperText}
+              {resolvedHelperText}
             </small>
-          ) : null}
-        </label>
-      )}
+          </label>
+        );
+      }}
     />
   );
 }

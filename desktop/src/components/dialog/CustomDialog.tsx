@@ -81,8 +81,13 @@ export default function CustomDialog({
             {description ? <p>{description}</p> : null}
           </div>
 
-          <button className="secondary-button custom-dialog-close" onClick={onClose} type="button">
-            Close
+          <button
+            aria-label="Close dialog"
+            className="custom-dialog-close"
+            onClick={onClose}
+            type="button"
+          >
+            ×
           </button>
         </div>
 

@@ -25,28 +25,30 @@ export default function RHFDatePicker({
     <Controller
       control={control}
       name={name}
-      render={({ field, fieldState: { error } }) => (
-        <label className={`field rhf-field${className ? ` ${className}` : ""}`}>
-          <span>{label}</span>
+      render={({ field, fieldState: { error } }) => {
+        const resolvedHelperText = error ? error.message : (helperText ?? "\u00A0");
 
-          <input
-            disabled={disabled}
-            max={max}
-            min={min}
-            onBlur={field.onBlur}
-            onChange={(event) => field.onChange(event.target.value)}
-            ref={field.ref}
-            type="date"
-            value={(field.value as string) ?? ""}
-          />
+        return (
+          <label className={`field rhf-field${className ? ` ${className}` : ""}`}>
+            <span>{label}</span>
 
-          {error?.message || helperText ? (
+            <input
+              disabled={disabled}
+              max={max}
+              min={min}
+              onBlur={field.onBlur}
+              onChange={(event) => field.onChange(event.target.value)}
+              ref={field.ref}
+              type="date"
+              value={(field.value as string) ?? ""}
+            />
+
             <small className={`rhf-helper-text${error ? " error" : ""}`}>
-              {error ? error.message : helperText}
+              {resolvedHelperText}
             </small>
-          ) : null}
-        </label>
-      )}
+          </label>
+        );
+      }}
     />
   );
 }

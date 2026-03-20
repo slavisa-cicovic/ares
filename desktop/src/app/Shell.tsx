@@ -38,6 +38,8 @@ export function Shell({
   children
 }: ShellProps) {
   const activeLabel = navigationItems.find((item) => item.id === activeView)?.label ?? "Ares";
+  const headerDescription =
+    activeView === "settings" ? "Company, profile, and appearance controls." : null;
 
   return (
     <div className="app-shell">
@@ -45,7 +47,6 @@ export function Shell({
         <div className="brand-block">
           <span className="brand-kicker">Ares</span>
           <h1>Ares Desktop</h1>
-          <p>Backend-connected business workspace</p>
         </div>
 
         <nav className="app-nav">
@@ -67,7 +68,7 @@ export function Shell({
           <div className="header-copy">
             <span className="eyebrow">{activeLabel}</span>
             <h2>{companyName}</h2>
-            <p>{activeLabel === "Settings" ? "Company, profile, and appearance controls." : "Backend-connected business workspace."}</p>
+            {headerDescription ? <p>{headerDescription}</p> : null}
           </div>
 
           <div className="account-panel">

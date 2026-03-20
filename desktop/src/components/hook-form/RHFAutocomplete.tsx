@@ -33,6 +33,7 @@ export default function RHFAutocomplete<TOption, TValue extends string | number>
       render={({ field, fieldState: { error } }) => {
         const selectedOption = options.find((option) => getOptionValue(option) === field.value);
         const inputValue = selectedOption ? getOptionLabel(selectedOption) : "";
+        const resolvedHelperText = error ? error.message : (helperText ?? "\u00A0");
 
         return (
           <label className={`field rhf-field${className ? ` ${className}` : ""}`}>
@@ -63,11 +64,9 @@ export default function RHFAutocomplete<TOption, TValue extends string | number>
               ))}
             </datalist>
 
-            {error?.message || helperText ? (
-              <small className={`rhf-helper-text${error ? " error" : ""}`}>
-                {error ? error.message : helperText}
-              </small>
-            ) : null}
+            <small className={`rhf-helper-text${error ? " error" : ""}`}>
+              {resolvedHelperText}
+            </small>
           </label>
         );
       }}

@@ -14,6 +14,19 @@ export type ClientSummary = {
   status: ClientStatus;
 };
 
+export type UpsertClientPayload = {
+  name: string;
+  pib: string | null;
+  mb: string | null;
+  email: string | null;
+  phone: string | null;
+  address: string | null;
+  city: string | null;
+  postalCode: string | null;
+  country: string | null;
+  status: ClientStatus;
+};
+
 export type ListClientsParams = {
   page: number;
   size: number;

@@ -7,6 +7,7 @@ import type {
   ListClientsParams,
   PagedResponse,
   ReportsSummary,
+  UpsertClientPayload,
   UpdateCompanyPayload
 } from "./types";
 
@@ -125,6 +126,20 @@ export class DesktopApiClient {
     }
 
     return this.request<PagedResponse<ClientSummary>>(`/clients?${query.toString()}`);
+  }
+
+  async createClient(payload: UpsertClientPayload): Promise<ClientSummary> {
+    return this.request<ClientSummary>("/clients", {
+      method: "POST",
+      body: JSON.stringify(payload)
+    });
+  }
+
+  async updateClient(clientId: string, payload: UpsertClientPayload): Promise<ClientSummary> {
+    return this.request<ClientSummary>(`/clients/${clientId}`, {
+      method: "PUT",
+      body: JSON.stringify(payload)
+    });
   }
 
   private async request<T>(path: string, init?: RequestInit, retry = true): Promise<T> {

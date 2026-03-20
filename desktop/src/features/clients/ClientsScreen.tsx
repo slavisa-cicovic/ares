@@ -13,6 +13,7 @@ import { ApiClientError } from "../../lib/api/DesktopApiClient";
 import type { ClientStatus, ClientSummary, PagedResponse } from "../../lib/api/types";
 import { useAuth } from "../auth/AuthProvider";
 import type { AuthenticatedUser } from "../auth/types";
+import { ClientFormDialog } from "./ClientFormDialog";
 
 type ClientsScreenProps = {
   user: AuthenticatedUser;
@@ -25,7 +26,8 @@ const headCells: TableHeadCell[] = [
   { id: "email", label: "Email", minWidth: 220 },
   { id: "phone", label: "Phone", sortable: false, minWidth: 160 },
   { id: "location", label: "Location", sortable: false, minWidth: 220 },
-  { id: "status", label: "Status", minWidth: 120 }
+  { id: "status", label: "Status", minWidth: 120 },
+  { id: "actions", label: "Actions", sortable: false, align: "right", minWidth: 140 }
 ];
 
 const emptyPage: PagedResponse<ClientSummary> = {
@@ -65,6 +67,8 @@ export function ClientsScreen({ user }: ClientsScreenProps) {
   const [pageData, setPageData] = useState<PagedResponse<ClientSummary>>(emptyPage);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [selectedClient, setSelectedClient] = useState<ClientSummary | null>(null);
 
   const isCompanyAdmin = user.roles.includes("company-admin");
   const rows = pageData.items;
@@ -128,15 +132,26 @@ export function ClientsScreen({ user }: ClientsScreenProps) {
     setReloadKey((current) => current + 1);
   }
 
+  function handleCreate() {
+    setSelectedClient(null);
+    setIsDialogOpen(true);
+  }
+
+  function handleEdit(client: ClientSummary) {
+    setSelectedClient(client);
+    setIsDialogOpen(true);
+  }
+
+  function handleDialogClose() {
+    setIsDialogOpen(false);
+    setSelectedClient(null);
+  }
+
   return (
     <div className="module-screen">
       <div className="screen-intro">
         <span className="eyebrow">Clients</span>
         <h3>Client directory</h3>
-        <p>
-          This list follows the old Minifakt flow, but now reads from the tenant-safe backend
-          module.
-        </p>
       </div>
 
       <div className="module-card">
@@ -162,12 +177,15 @@ export function ClientsScreen({ user }: ClientsScreenProps) {
           </div>
 
           <div className="module-toolbar-group">
+            {isCompanyAdmin ? (
+              <button className="primary-button" onClick={handleCreate} type="button">
+                New Client
+              </button>
+            ) : null}
             <button className="secondary-button" onClick={handleRefresh} type="button">
               Refresh
             </button>
-            <span className="muted-note">
-              {isCompanyAdmin ? "Write actions will be added next." : "Read-only access."}
-            </span>
+            {!isCompanyAdmin ? <span className="muted-note">Read-only access.</span> : null}
           </div>
         </div>
 
@@ -228,6 +246,19 @@ export function ClientsScreen({ user }: ClientsScreenProps) {
                           {client.status === "ACTIVE" ? "Active" : "Inactive"}
                         </span>
                       </td>
+                      <td className="table-actions-cell">
+                        {isCompanyAdmin ? (
+                          <button
+                            className="secondary-button"
+                            onClick={() => handleEdit(client)}
+                            type="button"
+                          >
+                            Edit
+                          </button>
+                        ) : (
+                          <span className="muted-note">View only</span>
+                        )}
+                      </td>
                     </tr>
                   ))
                 : null}
@@ -247,7 +278,7 @@ export function ClientsScreen({ user }: ClientsScreenProps) {
           count={totalElements}
           dense={table.dense}
           denseVisible
-          note="Server-backed pagination and sorting"
+          note=""
           onChangeDense={table.onChangeDense}
           onChangePage={table.onChangePage}
           onChangeRowsPerPage={table.onChangeRowsPerPage}
@@ -256,6 +287,13 @@ export function ClientsScreen({ user }: ClientsScreenProps) {
           rowsPerPageOptions={[10, 20, 50]}
         />
       </div>
+
+      <ClientFormDialog
+        client={selectedClient}
+        onClose={handleDialogClose}
+        onSaved={handleRefresh}
+        open={isDialogOpen}
+      />
     </div>
   );
 }

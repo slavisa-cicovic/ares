@@ -16,6 +16,7 @@ import type {
   ListClientsParams,
   PagedResponse,
   ReportsSummary,
+  UpsertClientPayload,
   UpdateCompanyPayload
 } from "../../lib/api/types";
 
@@ -33,6 +34,8 @@ type AuthContextValue = {
   updateCompany: (payload: UpdateCompanyPayload) => Promise<CompanyResponse>;
   changePassword: (payload: ChangePasswordPayload) => Promise<void>;
   getClients: (params: ListClientsParams) => Promise<PagedResponse<ClientSummary>>;
+  createClient: (payload: UpsertClientPayload) => Promise<ClientSummary>;
+  updateClient: (clientId: string, payload: UpsertClientPayload) => Promise<ClientSummary>;
 };
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8080/api";
@@ -136,6 +139,12 @@ export function AuthProvider({ children }: PropsWithChildren) {
     },
     getClients: async (params) => {
       return client.listClients(params);
+    },
+    createClient: async (payload) => {
+      return client.createClient(payload);
+    },
+    updateClient: async (clientId, payload) => {
+      return client.updateClient(clientId, payload);
     }
   };
 
