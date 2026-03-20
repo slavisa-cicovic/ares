@@ -13,10 +13,13 @@ import type {
   ChangePasswordPayload,
   ClientSummary,
   CompanyResponse,
+  ItemSummary,
   ListClientsParams,
+  ListItemsParams,
   PagedResponse,
   ReportsSummary,
   UpsertClientPayload,
+  UpsertItemPayload,
   UpdateCompanyPayload
 } from "../../lib/api/types";
 
@@ -36,6 +39,10 @@ type AuthContextValue = {
   getClients: (params: ListClientsParams) => Promise<PagedResponse<ClientSummary>>;
   createClient: (payload: UpsertClientPayload) => Promise<ClientSummary>;
   updateClient: (clientId: string, payload: UpsertClientPayload) => Promise<ClientSummary>;
+  getItems: (params: ListItemsParams) => Promise<PagedResponse<ItemSummary>>;
+  createItem: (payload: UpsertItemPayload) => Promise<ItemSummary>;
+  updateItem: (itemId: string, payload: UpsertItemPayload) => Promise<ItemSummary>;
+  deleteItem: (itemId: string) => Promise<void>;
 };
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8080/api";
@@ -148,6 +155,18 @@ export function AuthProvider({ children }: PropsWithChildren) {
     },
     updateClient: async (clientId, payload) => {
       return client.updateClient(clientId, payload);
+    },
+    getItems: async (params) => {
+      return client.listItems(params);
+    },
+    createItem: async (payload) => {
+      return client.createItem(payload);
+    },
+    updateItem: async (itemId, payload) => {
+      return client.updateItem(itemId, payload);
+    },
+    deleteItem: async (itemId) => {
+      await client.deleteItem(itemId);
     }
   };
 

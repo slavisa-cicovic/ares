@@ -10,9 +10,13 @@ import com.sc.ares.features.client.repository.ClientRepository;
 import com.sc.ares.features.company.entity.Company;
 import com.sc.ares.features.company.entity.CompanyStatus;
 import com.sc.ares.features.company.repository.CompanyRepository;
+import com.sc.ares.features.item.entity.Item;
+import com.sc.ares.features.item.entity.ItemStatus;
+import com.sc.ares.features.item.repository.ItemRepository;
 import com.sc.ares.features.user.entity.AppUser;
 import com.sc.ares.features.user.entity.UserStatus;
 import com.sc.ares.features.user.repository.UserRepository;
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 import org.springframework.boot.ApplicationArguments;
@@ -33,6 +37,7 @@ public class DevSeedDataRunner implements ApplicationRunner {
     private final RoleRepository roleRepository;
     private final UserRoleRepository userRoleRepository;
     private final ClientRepository clientRepository;
+    private final ItemRepository itemRepository;
     private final PasswordEncoder passwordEncoder;
 
     public DevSeedDataRunner(
@@ -41,6 +46,7 @@ public class DevSeedDataRunner implements ApplicationRunner {
         RoleRepository roleRepository,
         UserRoleRepository userRoleRepository,
         ClientRepository clientRepository,
+        ItemRepository itemRepository,
         PasswordEncoder passwordEncoder
     ) {
         this.companyRepository = companyRepository;
@@ -48,6 +54,7 @@ public class DevSeedDataRunner implements ApplicationRunner {
         this.roleRepository = roleRepository;
         this.userRoleRepository = userRoleRepository;
         this.clientRepository = clientRepository;
+        this.itemRepository = itemRepository;
         this.passwordEncoder = passwordEncoder;
     }
 
@@ -70,28 +77,28 @@ public class DevSeedDataRunner implements ApplicationRunner {
             "Admin",
             roles.get("super-admin")
         );
-        ensureUserWithRole(
+        AppUser adminOne = ensureUserWithRole(
             companyOne,
             "admin.one@local.ares",
             "Admin",
             "One",
             roles.get("company-admin")
         );
-        ensureUserWithRole(
+        AppUser userOne = ensureUserWithRole(
             companyOne,
             "user.one@local.ares",
             "User",
             "One",
             roles.get("user")
         );
-        ensureUserWithRole(
+        AppUser adminTwo = ensureUserWithRole(
             companyTwo,
             "admin.two@local.ares",
             "Admin",
             "Two",
             roles.get("company-admin")
         );
-        ensureUserWithRole(
+        AppUser userTwo = ensureUserWithRole(
             companyTwo,
             "user.two@local.ares",
             "User",
@@ -101,6 +108,8 @@ public class DevSeedDataRunner implements ApplicationRunner {
 
         seedClients(companyOne, "alpha");
         seedClients(companyTwo, "beta");
+        seedItems(companyOne, adminOne, userOne, "alpha");
+        seedItems(companyTwo, adminTwo, userTwo, "beta");
     }
 
     private Company ensureCompany(String name) {
@@ -209,6 +218,71 @@ public class DevSeedDataRunner implements ApplicationRunner {
             ));
     }
 
+    private void seedItems(
+        Company company,
+        AppUser adminUser,
+        AppUser regularUser,
+        String companySlug
+    ) {
+        List<DevItemSeed> items = List.of(
+            new DevItemSeed("Bookkeeping Hour", "SRV-%s-001".formatted(companySlug.toUpperCase()), "Monthly bookkeeping work", "hour", "35.00", "20.00", ItemStatus.ACTIVE, regularUser),
+            new DevItemSeed("Payroll Processing", "SRV-%s-002".formatted(companySlug.toUpperCase()), "Payroll preparation and reports", "service", "120.00", "20.00", ItemStatus.ACTIVE, regularUser),
+            new DevItemSeed("VAT Filing", "SRV-%s-003".formatted(companySlug.toUpperCase()), "VAT return filing", "service", "90.00", "20.00", ItemStatus.ACTIVE, regularUser),
+            new DevItemSeed("Annual Statement", "SRV-%s-004".formatted(companySlug.toUpperCase()), "Year-end financial statement package", "service", "250.00", "20.00", ItemStatus.ACTIVE, regularUser),
+            new DevItemSeed("Office Supplies", "GOODS-%s-001".formatted(companySlug.toUpperCase()), "General office supplies", "piece", "4.50", "20.00", ItemStatus.ACTIVE, regularUser),
+            new DevItemSeed("Printer Toner", "GOODS-%s-002".formatted(companySlug.toUpperCase()), "Black toner cartridge", "piece", "78.00", "20.00", ItemStatus.ACTIVE, regularUser),
+            new DevItemSeed("Archive Box", "GOODS-%s-003".formatted(companySlug.toUpperCase()), "Document archive storage box", "piece", "2.80", "20.00", ItemStatus.ACTIVE, regularUser),
+            new DevItemSeed("Consulting Session", "SRV-%s-005".formatted(companySlug.toUpperCase()), "Financial consulting session", "hour", "55.00", "20.00", ItemStatus.ACTIVE, adminUser),
+            new DevItemSeed("Tax Advisory", "SRV-%s-006".formatted(companySlug.toUpperCase()), "Tax advisory engagement", "service", "180.00", "20.00", ItemStatus.ACTIVE, adminUser),
+            new DevItemSeed("Implementation Workshop", "SRV-%s-007".formatted(companySlug.toUpperCase()), "Onboarding workshop", "day", "320.00", "20.00", ItemStatus.ACTIVE, adminUser),
+            new DevItemSeed("Cloud Subscription", "SUB-%s-001".formatted(companySlug.toUpperCase()), "Monthly software subscription", "month", "29.90", "20.00", ItemStatus.ACTIVE, adminUser),
+            new DevItemSeed("Support Retainer", "SUB-%s-002".formatted(companySlug.toUpperCase()), "Monthly support retainer", "month", "150.00", "20.00", ItemStatus.ACTIVE, adminUser),
+            new DevItemSeed("Legacy Maintenance", "SRV-%s-008".formatted(companySlug.toUpperCase()), "Legacy support package", "service", "95.00", "20.00", ItemStatus.INACTIVE, adminUser),
+            new DevItemSeed("Dormant License", "SUB-%s-003".formatted(companySlug.toUpperCase()), "Inactive historical license", "month", "19.90", "20.00", ItemStatus.INACTIVE, adminUser)
+        );
+
+        for (DevItemSeed seed : items) {
+            ensureItem(
+                company,
+                seed.createdByUser(),
+                seed.name(),
+                seed.code(),
+                seed.description(),
+                seed.unit(),
+                seed.price(),
+                seed.taxRate(),
+                seed.status()
+            );
+        }
+    }
+
+    private Item ensureItem(
+        Company company,
+        AppUser createdByUser,
+        String name,
+        String code,
+        String description,
+        String unit,
+        String price,
+        String taxRate,
+        ItemStatus status
+    ) {
+        return itemRepository.findByCompanyIdAndCodeIgnoreCaseAndDeletedAtIsNull(company.getId(), code)
+            .orElseGet(() -> itemRepository.save(
+                Item.create(
+                    company,
+                    createdByUser,
+                    name,
+                    code,
+                    description,
+                    unit,
+                    new BigDecimal(price),
+                    new BigDecimal(taxRate),
+                    status
+                )
+            ));
+    }
+
     private record DevClientSeed(
         String name,
         String pib,
@@ -220,6 +294,18 @@ public class DevSeedDataRunner implements ApplicationRunner {
         String postalCode,
         String country,
         ClientStatus status
+    ) {
+    }
+
+    private record DevItemSeed(
+        String name,
+        String code,
+        String description,
+        String unit,
+        String price,
+        String taxRate,
+        ItemStatus status,
+        AppUser createdByUser
     ) {
     }
 }

@@ -5,6 +5,7 @@ import java.util.UUID;
 
 public record ItemResponse(
     UUID id,
+    UUID createdByUserId,
     String name,
     String code,
     String description,

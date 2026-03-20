@@ -3,9 +3,10 @@ import { CssBaseline, ThemeProvider } from "@mui/material";
 import { AuthProvider, useAuth } from "../features/auth/AuthProvider";
 import { DashboardScreen } from "../features/dashboard/DashboardScreen";
 import { LoginScreen } from "../features/auth/LoginScreen";
-import { PlaceholderScreen } from "../features/navigation/PlaceholderScreen";
 import { SettingsScreen } from "../features/settings/SettingsScreen";
 import { ClientsScreen } from "../features/clients/ClientsScreen";
+import { ItemsScreen } from "../features/items/ItemsScreen";
+import { PlaceholderScreen } from "../features/navigation/PlaceholderScreen";
 import { normalizeDesktopTheme } from "../features/settings/themeStorage";
 import { Shell, type AppView } from "./Shell";
 import { createAppTheme } from "../theme/createAppTheme";
@@ -40,12 +41,7 @@ function AppContent() {
         {activeView === "dashboard" ? <DashboardScreen /> : null}
         {activeView === "settings" ? <SettingsScreen user={state.user} /> : null}
         {activeView === "clients" ? <ClientsScreen user={state.user} /> : null}
-        {activeView === "items" ? (
-          <PlaceholderScreen
-            description="Item catalog screens will connect to the existing backend item module."
-            title="Items"
-          />
-        ) : null}
+        {activeView === "items" ? <ItemsScreen user={state.user} /> : null}
         {activeView === "invoices" ? (
           <PlaceholderScreen
             description="Invoice drafting, issuing, and detail workflows will live here."

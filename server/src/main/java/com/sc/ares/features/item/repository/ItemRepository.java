@@ -13,6 +13,8 @@ public interface ItemRepository extends JpaRepository<Item, UUID> {
 
     Optional<Item> findByIdAndCompanyIdAndDeletedAtIsNull(UUID id, UUID companyId);
 
+    Optional<Item> findByCompanyIdAndCodeIgnoreCaseAndDeletedAtIsNull(UUID companyId, String code);
+
     boolean existsByCompanyIdAndCodeIgnoreCaseAndDeletedAtIsNull(UUID companyId, String code);
 
     boolean existsByCompanyIdAndCodeIgnoreCaseAndDeletedAtIsNullAndIdNot(UUID companyId, String code, UUID id);

@@ -172,6 +172,7 @@ public class ItemService {
     private ItemResponse toResponse(Item item) {
         return new ItemResponse(
             item.getId(),
+            item.getCreatedByUser().getId(),
             item.getName(),
             item.getCode(),
             item.getDescription(),

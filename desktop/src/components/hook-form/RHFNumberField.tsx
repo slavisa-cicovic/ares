@@ -37,6 +37,23 @@ function formatDigits(digits: string, decimals: number): string {
   return `${integerDigits}.${fractionDigits}`;
 }
 
+function toDisplayValue(value: string, decimals: number): string {
+  if (!value) {
+    return "";
+  }
+
+  const numericValue = Number(value);
+
+  if (!Number.isFinite(numericValue)) {
+    return value;
+  }
+
+  return new Intl.NumberFormat("sr-RS", {
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals
+  }).format(numericValue);
+}
+
 export default function RHFNumberField({
   name,
   label,
@@ -56,6 +73,7 @@ export default function RHFNumberField({
       name={name}
       render={({ field, fieldState: { error } }) => {
         const normalizedValue = formatDigits(toDigitString(field.value), decimals);
+        const displayValue = toDisplayValue(normalizedValue, decimals);
         const resolvedHelperText = error ? error.message : (helperText ?? "\u00A0");
 
         return (
@@ -81,7 +99,7 @@ export default function RHFNumberField({
               }
             }}
             sx={{ "& input": { textAlign: "right" } }}
-            value={normalizedValue}
+            value={displayValue}
           />
         );
       }}

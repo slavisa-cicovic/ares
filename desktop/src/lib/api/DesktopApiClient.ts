@@ -4,10 +4,13 @@ import type {
   ChangePasswordPayload,
   ClientSummary,
   CompanyResponse,
+  ItemSummary,
   ListClientsParams,
+  ListItemsParams,
   PagedResponse,
   ReportsSummary,
   UpsertClientPayload,
+  UpsertItemPayload,
   UpdateCompanyPayload
 } from "./types";
 
@@ -139,6 +142,44 @@ export class DesktopApiClient {
     return this.request<ClientSummary>(`/clients/${clientId}`, {
       method: "PUT",
       body: JSON.stringify(payload)
+    });
+  }
+
+  async listItems(params: ListItemsParams): Promise<PagedResponse<ItemSummary>> {
+    const query = new URLSearchParams({
+      page: String(params.page),
+      size: String(params.size),
+      sort: params.sort
+    });
+
+    if (params.status) {
+      query.set("status", params.status);
+    }
+
+    if (params.search && params.search.trim()) {
+      query.set("search", params.search.trim());
+    }
+
+    return this.request<PagedResponse<ItemSummary>>(`/items?${query.toString()}`);
+  }
+
+  async createItem(payload: UpsertItemPayload): Promise<ItemSummary> {
+    return this.request<ItemSummary>("/items", {
+      method: "POST",
+      body: JSON.stringify(payload)
+    });
+  }
+
+  async updateItem(itemId: string, payload: UpsertItemPayload): Promise<ItemSummary> {
+    return this.request<ItemSummary>(`/items/${itemId}`, {
+      method: "PUT",
+      body: JSON.stringify(payload)
+    });
+  }
+
+  async deleteItem(itemId: string): Promise<void> {
+    await this.request<void>(`/items/${itemId}`, {
+      method: "DELETE"
     });
   }
 
