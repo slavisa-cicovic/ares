@@ -52,10 +52,6 @@ export function Shell({
   onLogout,
   children
 }: ShellProps) {
-  const activeLabel = navigationItems.find((item) => item.id === activeView)?.label ?? "Ares";
-  const headerDescription =
-    activeView === "settings" ? "Company, profile, and appearance controls." : null;
-
   return (
     <Box sx={{ display: "flex", minHeight: "100vh" }}>
       <Drawer
@@ -100,19 +96,27 @@ export function Shell({
       <Box sx={{ display: "flex", flexDirection: "column", flexGrow: 1, minWidth: 0 }}>
         <AppBar color="transparent" elevation={0} position="static" sx={{ borderBottom: "1px solid", borderColor: "divider", backdropFilter: "blur(8px)" }}>
           <Toolbar sx={{ alignItems: "flex-start", gap: 3, justifyContent: "space-between", py: 2 }}>
-            <Box>
-              <Typography color="primary.main" sx={{ letterSpacing: "0.14em", textTransform: "uppercase" }} variant="overline">
-                {activeLabel}
-              </Typography>
-              <Typography variant="h4">{companyName}</Typography>
-              {headerDescription ? (
-                <Typography color="text.secondary" sx={{ mt: 1 }} variant="body2">
-                  {headerDescription}
-                </Typography>
-              ) : null}
-            </Box>
+            <Stack alignItems="center" direction="row" spacing={2} alignSelf="center">
+              <Box
+                sx={{
+                  width: 48,
+                  height: 48,
+                  display: "grid",
+                  placeItems: "center",
+                  borderRadius: 2,
+                  bgcolor: "primary.main",
+                  color: "primary.contrastText",
+                  fontWeight: 700,
+                  fontSize: 18
+                }}
+              >
+                {companyName.charAt(0).toUpperCase()}
+              </Box>
 
-            <Paper elevation={0} sx={{ p: 2, minWidth: 280 }}>
+              <Typography variant="h5">{companyName}</Typography>
+            </Stack>
+
+            <Paper elevation={0} sx={{ p: 2, minWidth: 280, alignSelf: "center" }}>
               <Stack alignItems="flex-start" direction="row" justifyContent="space-between" spacing={2}>
                 <Box>
                   <Typography color="primary.main" sx={{ letterSpacing: "0.14em", textTransform: "uppercase" }} variant="overline">
