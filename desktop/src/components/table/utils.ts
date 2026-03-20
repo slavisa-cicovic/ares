@@ -3,7 +3,8 @@ import type { TableOrder } from "./types";
 export type Comparable = string | number | boolean | Date | null | undefined;
 
 export function emptyRows(page: number, rowsPerPage: number, arrayLength: number) {
-  return page ? Math.max(0, (1 + page) * rowsPerPage - arrayLength) : 0;
+  void page;
+  return Math.max(0, rowsPerPage - arrayLength);
 }
 
 function descendingComparator<T>(a: T, b: T, orderBy: keyof T) {
