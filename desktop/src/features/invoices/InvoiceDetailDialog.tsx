@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Alert,
   Box,
@@ -82,7 +82,13 @@ export function InvoiceDetailDialog({
   onChanged,
   onOpenInvoice
 }: InvoiceDetailDialogProps) {
-  const { getInvoice, getInvoicePayments, getInvoiceRefunds, createInvoiceCreditNote } = useAuth();
+  const {
+    getInvoice,
+    getInvoicePdf,
+    getInvoicePayments,
+    getInvoiceRefunds,
+    createInvoiceCreditNote
+  } = useAuth();
   const [invoice, setInvoice] = useState<InvoiceDetail | null>(null);
   const [payments, setPayments] = useState<PaymentRecord[]>([]);
   const [refunds, setRefunds] = useState<RefundRecord[]>([]);
@@ -92,7 +98,87 @@ export function InvoiceDetailDialog({
   const [isRefundDialogOpen, setIsRefundDialogOpen] = useState(false);
   const [isConfirmCreditNoteOpen, setIsConfirmCreditNoteOpen] = useState(false);
   const [isCreatingCreditNote, setIsCreatingCreditNote] = useState(false);
+  const [isPdfLoading, setIsPdfLoading] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
+  const shouldBlurOnWindowFocusRef = useRef(false);
+
+  function blurActiveElement() {
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
+  }
+
+  function openNestedDialog(openDialog: () => void) {
+    blurActiveElement();
+    openDialog();
+  }
+
+  function toBase64(arrayBuffer: ArrayBuffer): string {
+    const bytes = new Uint8Array(arrayBuffer);
+    let binary = "";
+
+    for (const byte of bytes) {
+      binary += String.fromCharCode(byte);
+    }
+
+    return btoa(binary);
+  }
+
+  async function handlePdfAction(mode: "preview" | "save") {
+    if (!invoice) {
+      return;
+    }
+
+    shouldBlurOnWindowFocusRef.current = true;
+    blurActiveElement();
+    setError(null);
+    setIsPdfLoading(true);
+
+    try {
+      const pdf = await getInvoicePdf(invoice.id);
+      const payload = {
+        fileName: `${invoice.documentType === "CREDIT_NOTE" ? "credit-note" : "invoice"}-${invoice.invoiceNumber}.pdf`,
+        base64Data: toBase64(pdf)
+      };
+
+      if (mode === "preview") {
+        await window.aresDesktop.previewPdf(payload);
+      } else {
+        await window.aresDesktop.savePdf(payload);
+      }
+    } catch (actionError) {
+      setError(
+        actionError instanceof ApiClientError
+          ? actionError.message
+          : "Unable to generate PDF right now."
+      );
+    } finally {
+      blurActiveElement();
+      setIsPdfLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    if (!open) {
+      shouldBlurOnWindowFocusRef.current = false;
+      return;
+    }
+
+    function handleWindowFocus() {
+      if (!shouldBlurOnWindowFocusRef.current) {
+        return;
+      }
+
+      blurActiveElement();
+      shouldBlurOnWindowFocusRef.current = false;
+    }
+
+    window.addEventListener("focus", handleWindowFocus);
+
+    return () => {
+      window.removeEventListener("focus", handleWindowFocus);
+    };
+  }, [open]);
 
   useEffect(() => {
     if (!open || !invoiceId) {
@@ -145,12 +231,31 @@ export function InvoiceDetailDialog({
     <CustomDialog
       actions={
         <Stack direction="row" spacing={1.5}>
+          {invoice?.status === "ISSUED" ? (
+            <>
+              <Button
+                disabled={isPdfLoading}
+                onClick={() => void handlePdfAction("preview")}
+                variant="outlined"
+              >
+                Preview PDF
+              </Button>
+              <Button
+                disabled={isPdfLoading}
+                onClick={() => void handlePdfAction("save")}
+                variant="outlined"
+              >
+                Save PDF
+              </Button>
+            </>
+          ) : null}
+
           {canCreateCreditNote &&
           invoice?.status === "ISSUED" &&
           invoice.documentType === "INVOICE" &&
           !invoice.linkedCreditNoteId ? (
             <Button
-              onClick={() => setIsConfirmCreditNoteOpen(true)}
+              onClick={() => openNestedDialog(() => setIsConfirmCreditNoteOpen(true))}
               variant="outlined"
             >
               Create Credit Note
@@ -161,7 +266,7 @@ export function InvoiceDetailDialog({
           invoice?.status === "ISSUED" &&
           invoice.documentType === "INVOICE" &&
           invoice.outstandingAmount > 0 ? (
-            <Button onClick={() => setIsPaymentDialogOpen(true)} variant="contained">
+            <Button onClick={() => openNestedDialog(() => setIsPaymentDialogOpen(true))} variant="contained">
               Add Payment
             </Button>
           ) : null}
@@ -169,7 +274,7 @@ export function InvoiceDetailDialog({
           {canManagePayments &&
           invoice?.documentType === "CREDIT_NOTE" &&
           invoice.remainingRefundAmount > 0 ? (
-            <Button onClick={() => setIsRefundDialogOpen(true)} variant="contained">
+            <Button onClick={() => openNestedDialog(() => setIsRefundDialogOpen(true))} variant="contained">
               Record Refund
             </Button>
           ) : null}

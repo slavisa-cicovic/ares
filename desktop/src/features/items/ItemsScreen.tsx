@@ -106,6 +106,12 @@ export function ItemsScreen({ user }: ItemsScreenProps) {
   const totalElements = pageData.totalElements;
   const emptyRowsCount = emptyRows(table.page, table.rowsPerPage, rows.length);
 
+  function blurActiveElement() {
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
+  }
+
   useEffect(() => {
     let active = true;
 
@@ -172,16 +178,19 @@ export function ItemsScreen({ user }: ItemsScreenProps) {
   }
 
   function handleCreate() {
+    blurActiveElement();
     setSelectedItem(null);
     setIsDialogOpen(true);
   }
 
   function handleEdit(item: ItemSummary) {
+    blurActiveElement();
     setSelectedItem(item);
     setIsDialogOpen(true);
   }
 
   function handleRequestDelete(item: ItemSummary) {
+    blurActiveElement();
     setItemToDelete(item);
   }
 

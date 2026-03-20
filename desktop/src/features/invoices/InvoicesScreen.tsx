@@ -140,6 +140,17 @@ export function InvoicesScreen() {
   const totalElements = pageData.totalElements;
   const emptyRowsCount = emptyRows(table.page, table.rowsPerPage, rows.length);
 
+  function blurActiveElement() {
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
+  }
+
+  function openDialog(openAction: () => void) {
+    blurActiveElement();
+    openAction();
+  }
+
   useEffect(() => {
     let active = true;
 
@@ -255,6 +266,7 @@ export function InvoicesScreen() {
               {isCompanyAdmin ? (
                 <Button
                   onClick={() => {
+                    blurActiveElement();
                     setEditingInvoiceId(null);
                     setIsDraftDialogOpen(true);
                   }}
@@ -358,7 +370,7 @@ export function InvoicesScreen() {
                           <TableCell align="right">
                             <Stack direction="row" justifyContent="flex-end" spacing={1}>
                               <Button
-                                onClick={() => setSelectedInvoiceId(invoice.id)}
+                                onClick={() => openDialog(() => setSelectedInvoiceId(invoice.id))}
                                 size="small"
                                 startIcon={<ReceiptLongRoundedIcon />}
                                 variant="text"
@@ -369,6 +381,7 @@ export function InvoicesScreen() {
                                 <>
                                   <Button
                                     onClick={() => {
+                                      blurActiveElement();
                                       setEditingInvoiceId(invoice.id);
                                       setIsDraftDialogOpen(true);
                                     }}
@@ -379,7 +392,7 @@ export function InvoicesScreen() {
                                   </Button>
                                   <Button
                                     color="warning"
-                                    onClick={() => setIssueInvoiceId(invoice.id)}
+                                    onClick={() => openDialog(() => setIssueInvoiceId(invoice.id))}
                                     size="small"
                                     variant="text"
                                   >
@@ -425,7 +438,7 @@ export function InvoicesScreen() {
           setReloadKey((current) => current + 1);
         }}
         onClose={() => setSelectedInvoiceId(null)}
-        onOpenInvoice={(invoiceId) => setSelectedInvoiceId(invoiceId)}
+        onOpenInvoice={(invoiceId) => openDialog(() => setSelectedInvoiceId(invoiceId))}
         open={Boolean(selectedInvoiceId)}
       />
       <InvoiceDraftDialog

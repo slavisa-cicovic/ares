@@ -95,6 +95,12 @@ export function ClientsScreen({ user }: ClientsScreenProps) {
   const totalElements = pageData.totalElements;
   const emptyRowsCount = emptyRows(table.page, table.rowsPerPage, rows.length);
 
+  function blurActiveElement() {
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
+  }
+
   useEffect(() => {
     let active = true;
 
@@ -153,11 +159,13 @@ export function ClientsScreen({ user }: ClientsScreenProps) {
   }
 
   function handleCreate() {
+    blurActiveElement();
     setSelectedClient(null);
     setIsDialogOpen(true);
   }
 
   function handleEdit(client: ClientSummary) {
+    blurActiveElement();
     setSelectedClient(client);
     setIsDialogOpen(true);
   }
