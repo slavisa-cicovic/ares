@@ -51,6 +51,9 @@ public class Item {
     @Column(name = "tax_rate", nullable = false, precision = 5, scale = 2)
     private BigDecimal taxRate;
 
+    @Column(name = "default_value", nullable = false, precision = 15, scale = 3)
+    private BigDecimal defaultValue;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 32)
     private ItemStatus status;
@@ -76,6 +79,7 @@ public class Item {
         String unit,
         BigDecimal price,
         BigDecimal taxRate,
+        BigDecimal defaultValue,
         ItemStatus status
     ) {
         Instant now = Instant.now();
@@ -89,6 +93,7 @@ public class Item {
         item.unit = unit;
         item.price = price;
         item.taxRate = taxRate;
+        item.defaultValue = defaultValue;
         item.status = status;
         item.createdAt = now;
         item.updatedAt = now;
@@ -132,6 +137,10 @@ public class Item {
         return taxRate;
     }
 
+    public BigDecimal getDefaultValue() {
+        return defaultValue;
+    }
+
     public ItemStatus getStatus() {
         return status;
     }
@@ -143,6 +152,7 @@ public class Item {
         String unit,
         BigDecimal price,
         BigDecimal taxRate,
+        BigDecimal defaultValue,
         ItemStatus status
     ) {
         this.name = name;
@@ -151,6 +161,7 @@ public class Item {
         this.unit = unit;
         this.price = price;
         this.taxRate = taxRate;
+        this.defaultValue = defaultValue;
         this.status = status;
         this.updatedAt = Instant.now();
     }

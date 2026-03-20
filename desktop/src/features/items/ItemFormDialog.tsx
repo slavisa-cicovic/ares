@@ -29,6 +29,7 @@ const emptyValues: ItemFormValues = {
   unit: "",
   price: "",
   taxRate: "",
+  defaultValue: "1.000",
   active: true
 };
 
@@ -44,6 +45,7 @@ function toFormValues(item: ItemSummary | null): ItemFormValues {
     unit: item.unit,
     price: item.price.toFixed(2),
     taxRate: item.taxRate.toFixed(0),
+    defaultValue: item.defaultValue.toFixed(3),
     active: item.status === "ACTIVE"
   };
 }
@@ -61,6 +63,7 @@ function toPayload(values: ItemFormValues): UpsertItemPayload {
     unit: values.unit.trim(),
     price: values.price.trim(),
     taxRate: values.taxRate.trim(),
+    defaultValue: values.defaultValue.trim(),
     status: values.active ? "ACTIVE" : "INACTIVE"
   };
 }
@@ -143,6 +146,7 @@ export function ItemFormDialog({ open, item, onClose, onSaved }: ItemFormDialogP
           <RHFTextField label="Unit" maxLength={50} name="unit" />
           <RHFCurrencyField label="Price" name="price" />
           <RHFNumberField decimals={0} label="Tax Rate" name="taxRate" suffix="%" />
+          <RHFNumberField decimals={3} label="Default Value" name="defaultValue" />
           <RHFTextField className="field-span-2" label="Description" multiline name="description" rows={3} />
         </div>
 

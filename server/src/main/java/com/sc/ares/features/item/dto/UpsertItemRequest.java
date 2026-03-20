@@ -26,6 +26,10 @@ public record UpsertItemRequest(
     @DecimalMin(value = "0.00")
     @Digits(integer = 3, fraction = 2)
     BigDecimal taxRate,
+    @NotNull
+    @DecimalMin(value = "0.001")
+    @Digits(integer = 12, fraction = 3)
+    BigDecimal defaultValue,
     @NotBlank
     String status
 ) {

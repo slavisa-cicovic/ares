@@ -8,6 +8,14 @@ function isNonNegativeDecimal(value: string): boolean {
   return Number.parseFloat(value) >= 0;
 }
 
+function isPositiveQuantity(value: string): boolean {
+  if (!/^\d+(\.\d{1,3})?$/.test(value)) {
+    return false;
+  }
+
+  return Number.parseFloat(value) >= 0.001;
+}
+
 export const itemFormSchema = z.object({
   name: z
     .string()
@@ -38,6 +46,11 @@ export const itemFormSchema = z.object({
     .min(1, "Tax rate is required.")
     .refine(isNonNegativeDecimal, "Tax rate must be a valid non-negative amount.")
     .refine((value) => Number.parseFloat(value) <= 100, "Tax rate must be at most 100."),
+  defaultValue: z
+    .string()
+    .trim()
+    .min(1, "Default value is required.")
+    .refine(isPositiveQuantity, "Default value must be at least 0.001."),
   active: z.boolean()
 });
 

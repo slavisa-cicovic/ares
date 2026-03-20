@@ -129,11 +129,11 @@ class InvoiceModuleIntegrationTests {
         ));
         companyOneItem = itemRepository.save(Item.create(
             companyOne, adminOne, "Development Service", "DEV-001", "Monthly development", "hour",
-            new BigDecimal("100.00"), new BigDecimal("20.00"), ItemStatus.ACTIVE
+            new BigDecimal("100.00"), new BigDecimal("20.00"), new BigDecimal("1.000"), ItemStatus.ACTIVE
         ));
         companyTwoItem = itemRepository.save(Item.create(
             companyTwo, adminTwo, "Support Service", "SUP-001", "Support", "hour",
-            new BigDecimal("80.00"), new BigDecimal("10.00"), ItemStatus.ACTIVE
+            new BigDecimal("80.00"), new BigDecimal("10.00"), new BigDecimal("1.000"), ItemStatus.ACTIVE
         ));
     }
 

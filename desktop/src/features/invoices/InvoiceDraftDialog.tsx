@@ -51,7 +51,7 @@ const emptyLine: InvoiceLineFormValues = {
   itemName: "",
   itemCode: "",
   unit: "",
-  quantity: "1",
+  quantity: "1.000",
   unitPrice: "",
   taxRate: "20"
 };
@@ -77,7 +77,9 @@ function parseDecimal(value: string): number {
     return 0;
   }
 
-  const normalized = value.replace(/\./g, "").replace(",", ".");
+  const normalized = value.includes(",")
+    ? value.replace(/\./g, "").replace(",", ".")
+    : value;
   const parsed = Number(normalized);
   return Number.isFinite(parsed) ? parsed : 0;
 }
@@ -87,6 +89,13 @@ function formatPercent(value: string): string {
     minimumFractionDigits: 0,
     maximumFractionDigits: 0
   }).format(parseDecimal(value))} %`;
+}
+
+function formatQuantity(value: string): string {
+  return new Intl.NumberFormat("sr-RS", {
+    minimumFractionDigits: 3,
+    maximumFractionDigits: 3
+  }).format(parseDecimal(value));
 }
 
 function toFormValues(invoice: InvoiceDetail | null): InvoiceDraftFormValues {
@@ -105,7 +114,7 @@ function toFormValues(invoice: InvoiceDetail | null): InvoiceDraftFormValues {
       itemName: line.itemName,
       itemCode: line.itemCode ?? "",
       unit: line.unit,
-      quantity: line.quantity.toFixed(3).replace(/\.?0+$/, ""),
+      quantity: line.quantity.toFixed(3),
       unitPrice: line.unitPrice.toFixed(2),
       taxRate: line.taxRate.toFixed(0)
     }))
@@ -390,7 +399,7 @@ export function InvoiceDraftDialog({ open, invoiceId, onClose, onSaved }: Invoic
                       </TableCell>
                       <TableCell>{line.itemCode || "—"}</TableCell>
                       <TableCell>{line.unit || "—"}</TableCell>
-                      <TableCell align="right">{line.quantity || "—"}</TableCell>
+                      <TableCell align="right">{line.quantity ? formatQuantity(line.quantity) : "—"}</TableCell>
                       <TableCell align="right">{line.unitPrice ? formatMoney(parseDecimal(line.unitPrice), watchedCurrency || "RSD") : "—"}</TableCell>
                       <TableCell align="right">{line.taxRate ? formatPercent(line.taxRate) : "—"}</TableCell>
                       <TableCell align="right">{formatMoney(lineTotal(line), watchedCurrency || "RSD")}</TableCell>

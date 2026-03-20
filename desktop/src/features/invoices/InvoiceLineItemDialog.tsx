@@ -27,7 +27,7 @@ const emptyValues: InvoiceLineFormValues = {
   itemName: "",
   itemCode: "",
   unit: "",
-  quantity: "1",
+  quantity: "1.000",
   unitPrice: "",
   taxRate: "20"
 };
@@ -58,6 +58,7 @@ export function InvoiceLineItemDialog({ open, line, lineIndex, items, onClose, o
     setValue("itemName", selectedItem.name, { shouldDirty: true, shouldValidate: true });
     setValue("itemCode", selectedItem.code ?? "", { shouldDirty: true });
     setValue("unit", selectedItem.unit, { shouldDirty: true, shouldValidate: true });
+    setValue("quantity", selectedItem.defaultValue.toFixed(3), { shouldDirty: true, shouldValidate: true });
     setValue("unitPrice", selectedItem.price.toFixed(2), { shouldDirty: true, shouldValidate: true });
     setValue("taxRate", selectedItem.taxRate.toFixed(0), { shouldDirty: true, shouldValidate: true });
   }

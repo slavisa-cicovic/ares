@@ -12,6 +12,7 @@ public record ItemResponse(
     String unit,
     BigDecimal price,
     BigDecimal taxRate,
+    BigDecimal defaultValue,
     String status
 ) {
 }

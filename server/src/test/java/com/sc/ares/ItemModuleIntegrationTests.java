@@ -125,6 +125,7 @@ class ItemModuleIntegrationTests {
             "hour",
             new BigDecimal("120.00"),
             new BigDecimal("20.00"),
+            new BigDecimal("1.000"),
             ItemStatus.ACTIVE
         ));
         companyTwoItem = itemRepository.save(Item.create(
@@ -136,6 +137,7 @@ class ItemModuleIntegrationTests {
             "service",
             new BigDecimal("90.00"),
             new BigDecimal("10.00"),
+            new BigDecimal("1.000"),
             ItemStatus.ACTIVE
         ));
     }
@@ -154,7 +156,8 @@ class ItemModuleIntegrationTests {
             .andExpect(jsonPath("$.name").value("Consulting"))
             .andExpect(jsonPath("$.code").value("CONS-001"))
             .andExpect(jsonPath("$.price").value(200.00))
-            .andExpect(jsonPath("$.taxRate").value(20.00));
+            .andExpect(jsonPath("$.taxRate").value(20.00))
+            .andExpect(jsonPath("$.defaultValue").value(1.000));
     }
 
     @Test
@@ -364,6 +367,7 @@ class ItemModuleIntegrationTests {
                         "unit", "",
                         "price", "-1.00",
                         "taxRate", "20.00",
+                        "defaultValue", "1.000",
                         "status", "ACTIVE"
                     )))
             )
@@ -442,6 +446,7 @@ class ItemModuleIntegrationTests {
             "unit", unit,
             "price", price,
             "taxRate", taxRate,
+            "defaultValue", "1.000",
             "status", status
         ));
     }

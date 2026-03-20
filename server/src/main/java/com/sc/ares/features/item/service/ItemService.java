@@ -108,6 +108,7 @@ public class ItemService {
             normalizeRequired(request.unit()),
             normalizeMoney(request.price()),
             normalizeTaxRate(request.taxRate()),
+            normalizeDefaultValue(request.defaultValue()),
             parseRequiredStatus(request.status())
         );
 
@@ -130,6 +131,7 @@ public class ItemService {
             normalizeRequired(request.unit()),
             normalizeMoney(request.price()),
             normalizeTaxRate(request.taxRate()),
+            normalizeDefaultValue(request.defaultValue()),
             parseRequiredStatus(request.status())
         );
 
@@ -179,6 +181,7 @@ public class ItemService {
             item.getUnit(),
             item.getPrice(),
             item.getTaxRate(),
+            item.getDefaultValue(),
             item.getStatus().name()
         );
     }
@@ -271,6 +274,19 @@ public class ItemService {
 
         if (normalized.compareTo(new BigDecimal("100.00")) > 0) {
             throw new ApiBadRequestException("Invalid tax rate.");
+        }
+
+        return normalized;
+    }
+
+    private BigDecimal normalizeDefaultValue(BigDecimal value) {
+        if (value == null) {
+            throw new ApiBadRequestException("Required item field is missing.");
+        }
+
+        BigDecimal normalized = value.stripTrailingZeros().scale() < 0 ? value.setScale(0) : value;
+        if (normalized.compareTo(new BigDecimal("0.001")) < 0) {
+            throw new ApiBadRequestException("Invalid default value.");
         }
 
         return normalized;

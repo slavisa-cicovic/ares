@@ -9,6 +9,7 @@ export type ItemSummary = {
   unit: string;
   price: number;
   taxRate: number;
+  defaultValue: number;
   status: ItemStatus;
 };
 
@@ -19,6 +20,7 @@ export type UpsertItemPayload = {
   unit: string;
   price: string;
   taxRate: string;
+  defaultValue: string;
   status: ItemStatus;
 };
 

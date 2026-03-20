@@ -296,6 +296,7 @@ public class DevSeedDataRunner implements ApplicationRunner {
                     unit,
                     new BigDecimal(price),
                     new BigDecimal(taxRate),
+                    new BigDecimal("1.000"),
                     status
                 )
             ));
