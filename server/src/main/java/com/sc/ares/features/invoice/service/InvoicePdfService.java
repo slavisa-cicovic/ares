@@ -16,13 +16,18 @@ import com.sc.ares.features.refund.entity.CreditNoteRefund;
 import com.sc.ares.features.refund.repository.CreditNoteRefundRepository;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
 import java.text.NumberFormat;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.UUID;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -38,6 +43,7 @@ public class InvoicePdfService {
     private final InvoicePaymentStateService invoicePaymentStateService;
     private final InvoiceRefundStateService invoiceRefundStateService;
     private final InvoiceAccessService invoiceAccessService;
+    private final String invoiceTemplate;
 
     public InvoicePdfService(
         InvoiceRepository invoiceRepository,
@@ -53,6 +59,7 @@ public class InvoicePdfService {
         this.invoicePaymentStateService = invoicePaymentStateService;
         this.invoiceRefundStateService = invoiceRefundStateService;
         this.invoiceAccessService = invoiceAccessService;
+        this.invoiceTemplate = loadTemplate("templates/invoice/default.html");
     }
 
     @Transactional(readOnly = true)
@@ -113,61 +120,18 @@ public class InvoicePdfService {
             ? "#c57f17"
             : company.getBrandColor();
 
-        StringBuilder html = new StringBuilder();
-        html.append("""
-<html xmlns="http://www.w3.org/1999/xhtml" lang="en">
-<head>
-  <meta charset="utf-8" />
-  <style>
-    @page { size: A4; margin: 22mm 16mm 20mm 16mm; }
-    body { font-family: Arial, Helvetica, sans-serif; color: #1f2937; font-size: 12px; }
-    .topbar { height: 12px; border-radius: 999px; margin-bottom: 18px; }
-    .header-table, .meta-table, .summary-table, .history-table, .line-table { width: 100%; border-collapse: collapse; }
-    .header-table td { vertical-align: top; }
-    .brand-mark { width: 58px; height: 58px; border-radius: 16px; color: #fff; font-size: 28px; font-weight: 700; text-align: center; line-height: 58px; }
-    .doc-title { font-size: 28px; font-weight: 700; margin: 0 0 6px 0; }
-    .doc-subtitle { color: #6b7280; font-size: 12px; margin: 0; }
-    .section-title { font-size: 11px; font-weight: 700; color: #6b7280; margin: 0 0 8px 0; text-transform: uppercase; letter-spacing: 0.08em; }
-    .card { border: 1px solid #e5e7eb; border-radius: 14px; padding: 14px; }
-    .meta-table td { padding: 4px 0; }
-    .meta-label { color: #6b7280; width: 34%; }
-    .line-table { margin-top: 18px; }
-    .line-table th { background: #f8fafc; color: #475569; font-size: 11px; text-align: left; padding: 10px 8px; border-bottom: 1px solid #e2e8f0; }
-    .line-table td { padding: 10px 8px; border-bottom: 1px solid #e5e7eb; }
-    .line-table .num, .summary-table .value, .history-table .num { text-align: right; white-space: nowrap; }
-    .summary-wrap { margin-top: 18px; }
-    .summary-table td { padding: 6px 0; }
-    .summary-table .label { color: #6b7280; }
-    .summary-total td { font-size: 15px; font-weight: 700; }
-    .note { margin-top: 18px; padding: 14px; border-radius: 14px; background: #f8fafc; }
-    .history-table { margin-top: 10px; }
-    .history-table th, .history-table td { padding: 8px 6px; border-bottom: 1px solid #e5e7eb; text-align: left; }
-    .spacer { height: 18px; }
-  </style>
-</head>
-<body>
-""");
-
-        html.append("<div class=\"topbar\" style=\"background: ").append(escapeHtml(brandColor)).append(";\"></div>");
-        html.append("<table class=\"header-table\"><tr>");
-        html.append("<td style=\"width: 62%;\"><table><tr><td style=\"padding-right: 16px;\">");
-        html.append("<div class=\"brand-mark\" style=\"background: ").append(escapeHtml(brandColor)).append(";\">")
-            .append(escapeHtml(company.getName().substring(0, 1).toUpperCase(SERBIAN_LOCALE))).append("</div>");
-        html.append("</td><td><h1 class=\"doc-title\">")
-            .append(invoice.getDocumentType() == InvoiceDocumentType.CREDIT_NOTE ? "Credit Note" : "Invoice")
-            .append("</h1><p class=\"doc-subtitle\">").append(escapeHtml(company.getName())).append("</p></td></tr></table></td>");
-        html.append("<td style=\"width: 38%;\">");
-        appendMetaCard(html, "Document", List.of(
+        Map<String, String> placeholders = new LinkedHashMap<>();
+        placeholders.put("brandColor", escapeHtml(brandColor));
+        placeholders.put("brandInitial", escapeHtml(company.getName().substring(0, 1).toUpperCase(SERBIAN_LOCALE)));
+        placeholders.put("documentTitle", invoice.getDocumentType() == InvoiceDocumentType.CREDIT_NOTE ? "Credit Note" : "Invoice");
+        placeholders.put("companyName", escapeHtml(company.getName()));
+        placeholders.put("documentRows", buildMetaRows(List.of(
             metaRow("Number", invoice.getInvoiceNumber()),
             metaRow("Issue Date", formatDate(invoice.getIssueDate())),
             metaRow("Due Date", formatDate(invoice.getDueDate())),
             metaRow("Currency", invoice.getCurrency())
-        ));
-        html.append("</td></tr></table>");
-
-        html.append("<div class=\"spacer\"></div><table class=\"header-table\"><tr>");
-        html.append("<td style=\"width: 50%; padding-right: 8px;\">");
-        appendMetaCard(html, "Issuer", List.of(
+        )));
+        placeholders.put("issuerRows", buildMetaRows(List.of(
             metaRow("Name", company.getName()),
             metaRow("PIB", company.getPib()),
             metaRow("MB", company.getMb()),
@@ -175,32 +139,54 @@ public class InvoicePdfService {
             metaRow("Email", company.getEmail()),
             metaRow("Phone", company.getPhone()),
             metaRow("Bank Account", company.getBankAccount())
-        ));
-        html.append("</td><td style=\"width: 50%; padding-left: 8px;\">");
-        appendMetaCard(html, "Client", List.of(
+        )));
+        placeholders.put("clientRows", buildMetaRows(List.of(
             metaRow("Name", client.getName()),
             metaRow("PIB", client.getPib()),
             metaRow("MB", client.getMb()),
             metaRow("Address", joinAddress(client)),
             metaRow("Email", client.getEmail()),
             metaRow("Phone", client.getPhone())
-        ));
-        html.append("</td></tr></table>");
+        )));
+        placeholders.put("referenceSection", buildReferenceSection(invoice, linkedCreditNote));
+        placeholders.put("lineRows", buildLineRows(invoice));
+        placeholders.put("summaryRows", buildSummaryRows(invoice, paidAmount, refundedAmount));
+        placeholders.put("noteSection", buildNoteSection(invoice));
+        placeholders.put("paymentHistorySection", buildPaymentHistorySection(invoice, payments));
+        placeholders.put("refundHistorySection", buildRefundHistorySection(invoice, refunds));
 
+        return renderTemplate(invoiceTemplate, placeholders);
+    }
+
+    private String buildMetaRows(List<MetaRow> rows) {
+        StringBuilder html = new StringBuilder();
+        for (MetaRow row : rows) {
+            if (row.value() == null || row.value().isBlank()) {
+                continue;
+            }
+
+            html.append("<tr><td class=\"meta-label\">").append(escapeHtml(row.label())).append("</td><td>")
+                .append(escapeHtml(row.value())).append("</td></tr>");
+        }
+        return html.toString();
+    }
+
+    private String buildReferenceSection(Invoice invoice, Invoice linkedCreditNote) {
         if (invoice.getDocumentType() == InvoiceDocumentType.CREDIT_NOTE && invoice.getOriginalInvoice() != null) {
-            html.append("<div class=\"note\"><strong>Reference:</strong> This credit note references invoice ")
-                .append(escapeHtml(invoice.getOriginalInvoice().getInvoiceNumber())).append(".</div>");
-        } else if (linkedCreditNote != null) {
-            html.append("<div class=\"note\"><strong>Reference:</strong> This invoice has credit note ")
-                .append(escapeHtml(linkedCreditNote.getInvoiceNumber())).append(".</div>");
+            return "<div class=\"note\"><strong>Reference:</strong> This credit note references invoice "
+                + escapeHtml(invoice.getOriginalInvoice().getInvoiceNumber()) + ".</div>";
         }
 
-        html.append("<table class=\"line-table\"><thead><tr>");
-        html.append("<th style=\"width: 6%;\">#</th><th style=\"width: 31%;\">Item</th><th style=\"width: 11%;\">Code</th>");
-        html.append("<th style=\"width: 10%;\">Unit</th><th class=\"num\" style=\"width: 11%;\">Quantity</th>");
-        html.append("<th class=\"num\" style=\"width: 13%;\">Price</th><th class=\"num\" style=\"width: 8%;\">Tax</th>");
-        html.append("<th class=\"num\" style=\"width: 10%;\">Total</th></tr></thead><tbody>");
+        if (linkedCreditNote != null) {
+            return "<div class=\"note\"><strong>Reference:</strong> This invoice has credit note "
+                + escapeHtml(linkedCreditNote.getInvoiceNumber()) + ".</div>";
+        }
 
+        return "";
+    }
+
+    private String buildLineRows(Invoice invoice) {
+        StringBuilder html = new StringBuilder();
         for (InvoiceLine line : invoice.getLines()) {
             html.append("<tr><td>").append(line.getLineNumber()).append("</td><td>").append(escapeHtml(line.getItemName())).append("</td>");
             html.append("<td>").append(escapeHtml(orDash(line.getItemCode()))).append("</td><td>").append(escapeHtml(line.getUnit())).append("</td>");
@@ -209,10 +195,11 @@ public class InvoicePdfService {
             html.append("<td class=\"num\">").append(formatPercent(line.getTaxRate())).append("</td>");
             html.append("<td class=\"num\">").append(formatMoney(line.getLineTotal(), invoice.getCurrency())).append("</td></tr>");
         }
+        return html.toString();
+    }
 
-        html.append("</tbody></table>");
-
-        html.append("<div class=\"summary-wrap\"><table class=\"summary-table\">");
+    private String buildSummaryRows(Invoice invoice, BigDecimal paidAmount, BigDecimal refundedAmount) {
+        StringBuilder html = new StringBuilder();
         appendSummaryRow(html, "Subtotal", formatMoney(invoice.getSubtotal(), invoice.getCurrency()), false);
         appendSummaryRow(html, "Tax", formatMoney(invoice.getTaxTotal(), invoice.getCurrency()), false);
         appendSummaryRow(html, "Total", formatMoney(invoice.getTotal(), invoice.getCurrency()), true);
@@ -233,50 +220,57 @@ public class InvoicePdfService {
                 false
             );
         }
-        html.append("</table></div>");
-
-        if (invoice.getNote() != null && !invoice.getNote().isBlank()) {
-            html.append("<div class=\"note\"><strong>Note:</strong><br />")
-                .append(escapeHtml(invoice.getNote())).append("</div>");
-        }
-
-        if (!payments.isEmpty()) {
-            html.append("<div class=\"spacer\"></div><p class=\"section-title\">Payment History</p>");
-            html.append("<table class=\"history-table\"><thead><tr><th>Date</th><th>Note</th><th class=\"num\">Amount</th></tr></thead><tbody>");
-            for (Payment payment : payments) {
-                html.append("<tr><td>").append(formatDate(payment.getPaymentDate())).append("</td><td>")
-                    .append(escapeHtml(orDash(payment.getNote()))).append("</td><td class=\"num\">")
-                    .append(formatMoney(payment.getAmount(), invoice.getCurrency())).append("</td></tr>");
-            }
-            html.append("</tbody></table>");
-        }
-
-        if (!refunds.isEmpty()) {
-            html.append("<div class=\"spacer\"></div><p class=\"section-title\">Refund History</p>");
-            html.append("<table class=\"history-table\"><thead><tr><th>Date</th><th>Note</th><th class=\"num\">Amount</th></tr></thead><tbody>");
-            for (CreditNoteRefund refund : refunds) {
-                html.append("<tr><td>").append(formatDate(refund.getRefundDate())).append("</td><td>")
-                    .append(escapeHtml(orDash(refund.getNote()))).append("</td><td class=\"num\">")
-                    .append(formatMoney(refund.getAmount(), invoice.getCurrency())).append("</td></tr>");
-            }
-            html.append("</tbody></table>");
-        }
-
-        html.append("</body></html>");
         return html.toString();
     }
 
-    private void appendMetaCard(StringBuilder html, String title, List<MetaRow> rows) {
-        html.append("<div class=\"card\"><p class=\"section-title\">").append(escapeHtml(title)).append("</p><table class=\"meta-table\">");
-        for (MetaRow row : rows) {
-            if (row.value() == null || row.value().isBlank()) {
-                continue;
-            }
-
-            html.append("<tr><td class=\"meta-label\">").append(escapeHtml(row.label())).append("</td><td>")
-                .append(escapeHtml(row.value())).append("</td></tr>");
+    private String buildNoteSection(Invoice invoice) {
+        if (invoice.getNote() == null || invoice.getNote().isBlank()) {
+            return "";
         }
-        html.append("</table></div>");
+
+        return "<div class=\"note\"><strong>Note:</strong><br />" + escapeHtml(invoice.getNote()) + "</div>";
+    }
+
+    private String buildPaymentHistorySection(Invoice invoice, List<Payment> payments) {
+        if (payments.isEmpty()) {
+            return "";
+        }
+
+        StringBuilder html = new StringBuilder();
+        html.append("<div class=\"spacer\"></div><p class=\"section-title\">Payment History</p>");
+        html.append("<table class=\"history-table\"><thead><tr><th>Date</th><th>Note</th><th class=\"num\">Amount</th></tr></thead><tbody>");
+        for (Payment payment : payments) {
+            html.append("<tr><td>").append(formatDate(payment.getPaymentDate())).append("</td><td>")
+                .append(escapeHtml(orDash(payment.getNote()))).append("</td><td class=\"num\">")
+                .append(formatMoney(payment.getAmount(), invoice.getCurrency())).append("</td></tr>");
+        }
+        html.append("</tbody></table>");
+        return html.toString();
+    }
+
+    private String buildRefundHistorySection(Invoice invoice, List<CreditNoteRefund> refunds) {
+        if (refunds.isEmpty()) {
+            return "";
+        }
+
+        StringBuilder html = new StringBuilder();
+        html.append("<div class=\"spacer\"></div><p class=\"section-title\">Refund History</p>");
+        html.append("<table class=\"history-table\"><thead><tr><th>Date</th><th>Note</th><th class=\"num\">Amount</th></tr></thead><tbody>");
+        for (CreditNoteRefund refund : refunds) {
+            html.append("<tr><td>").append(formatDate(refund.getRefundDate())).append("</td><td>")
+                .append(escapeHtml(orDash(refund.getNote()))).append("</td><td class=\"num\">")
+                .append(formatMoney(refund.getAmount(), invoice.getCurrency())).append("</td></tr>");
+        }
+        html.append("</tbody></table>");
+        return html.toString();
+    }
+
+    private String renderTemplate(String template, Map<String, String> placeholders) {
+        String rendered = template;
+        for (Map.Entry<String, String> entry : placeholders.entrySet()) {
+            rendered = rendered.replace("{{" + entry.getKey() + "}}", entry.getValue());
+        }
+        return rendered;
     }
 
     private void appendSummaryRow(StringBuilder html, String label, String value, boolean total) {
@@ -286,6 +280,15 @@ public class InvoicePdfService {
         }
         html.append("><td class=\"label\">").append(escapeHtml(label)).append("</td><td class=\"value\">")
             .append(escapeHtml(value)).append("</td></tr>");
+    }
+
+    private String loadTemplate(String classpathLocation) {
+        ClassPathResource resource = new ClassPathResource(classpathLocation);
+        try (InputStream inputStream = resource.getInputStream()) {
+            return new String(inputStream.readAllBytes(), StandardCharsets.UTF_8);
+        } catch (IOException exception) {
+            throw new IllegalStateException("Unable to load invoice PDF template.", exception);
+        }
     }
 
     private MetaRow metaRow(String label, String value) {

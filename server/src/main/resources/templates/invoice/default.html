@@ -1,0 +1,103 @@
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <style>
+    @page { size: A4; margin: 22mm 16mm 20mm 16mm; }
+    body { font-family: Arial, Helvetica, sans-serif; color: #1f2937; font-size: 12px; }
+    .topbar { height: 12px; border-radius: 999px; margin-bottom: 18px; }
+    .header-table, .meta-table, .summary-table, .history-table, .line-table { width: 100%; border-collapse: collapse; }
+    .header-table td { vertical-align: top; }
+    .brand-mark { width: 58px; height: 58px; border-radius: 16px; color: #fff; font-size: 28px; font-weight: 700; text-align: center; line-height: 58px; }
+    .doc-title { font-size: 28px; font-weight: 700; margin: 0 0 6px 0; }
+    .doc-subtitle { color: #6b7280; font-size: 12px; margin: 0; }
+    .section-title { font-size: 11px; font-weight: 700; color: #6b7280; margin: 0 0 8px 0; text-transform: uppercase; letter-spacing: 0.08em; }
+    .card { border: 1px solid #e5e7eb; border-radius: 14px; padding: 14px; }
+    .meta-table td { padding: 4px 0; }
+    .meta-label { color: #6b7280; width: 34%; }
+    .line-table { margin-top: 18px; }
+    .line-table th { background: #f8fafc; color: #475569; font-size: 11px; text-align: left; padding: 10px 8px; border-bottom: 1px solid #e2e8f0; }
+    .line-table td { padding: 10px 8px; border-bottom: 1px solid #e5e7eb; }
+    .line-table .num, .summary-table .value, .history-table .num { text-align: right; white-space: nowrap; }
+    .summary-wrap { margin-top: 18px; }
+    .summary-table td { padding: 6px 0; }
+    .summary-table .label { color: #6b7280; }
+    .summary-total td { font-size: 15px; font-weight: 700; }
+    .note { margin-top: 18px; padding: 14px; border-radius: 14px; background: #f8fafc; }
+    .history-table { margin-top: 10px; }
+    .history-table th, .history-table td { padding: 8px 6px; border-bottom: 1px solid #e5e7eb; text-align: left; }
+    .spacer { height: 18px; }
+  </style>
+</head>
+<body>
+  <div class="topbar" style="background: {{brandColor}};"></div>
+
+  <table class="header-table">
+    <tr>
+      <td style="width: 62%;">
+        <table>
+          <tr>
+            <td style="padding-right: 16px;">
+              <div class="brand-mark" style="background: {{brandColor}};">{{brandInitial}}</div>
+            </td>
+            <td>
+              <h1 class="doc-title">{{documentTitle}}</h1>
+              <p class="doc-subtitle">{{companyName}}</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+      <td style="width: 38%;">
+        <div class="card">
+          <p class="section-title">Document</p>
+          <table class="meta-table">{{documentRows}}</table>
+        </div>
+      </td>
+    </tr>
+  </table>
+
+  <div class="spacer"></div>
+
+  <table class="header-table">
+    <tr>
+      <td style="width: 50%; padding-right: 8px;">
+        <div class="card">
+          <p class="section-title">Issuer</p>
+          <table class="meta-table">{{issuerRows}}</table>
+        </div>
+      </td>
+      <td style="width: 50%; padding-left: 8px;">
+        <div class="card">
+          <p class="section-title">Client</p>
+          <table class="meta-table">{{clientRows}}</table>
+        </div>
+      </td>
+    </tr>
+  </table>
+
+  {{referenceSection}}
+
+  <table class="line-table">
+    <thead>
+      <tr>
+        <th style="width: 6%;">#</th>
+        <th style="width: 31%;">Item</th>
+        <th style="width: 11%;">Code</th>
+        <th style="width: 10%;">Unit</th>
+        <th class="num" style="width: 11%;">Quantity</th>
+        <th class="num" style="width: 13%;">Price</th>
+        <th class="num" style="width: 8%;">Tax</th>
+        <th class="num" style="width: 10%;">Total</th>
+      </tr>
+    </thead>
+    <tbody>{{lineRows}}</tbody>
+  </table>
+
+  <div class="summary-wrap">
+    <table class="summary-table">{{summaryRows}}</table>
+  </div>
+
+  {{noteSection}}
+  {{paymentHistorySection}}
+  {{refundHistorySection}}
+</body>
+</html>
