@@ -1,21 +1,44 @@
 import type { PropsWithChildren } from "react";
 
+export type AppView =
+  | "dashboard"
+  | "clients"
+  | "items"
+  | "invoices"
+  | "payments"
+  | "reports"
+  | "settings";
+
 type ShellProps = PropsWithChildren<{
   companyName: string;
+  userName: string;
   userEmail: string;
+  activeView: AppView;
+  onNavigate: (view: AppView) => void;
   onLogout: () => Promise<void>;
 }>;
 
-const navigationItems = [
-  "Dashboard",
-  "Clients",
-  "Items",
-  "Invoices",
-  "Payments",
-  "Reports"
+const navigationItems: Array<{ id: AppView; label: string }> = [
+  { id: "dashboard", label: "Dashboard" },
+  { id: "clients", label: "Clients" },
+  { id: "items", label: "Items" },
+  { id: "invoices", label: "Invoices" },
+  { id: "payments", label: "Payments" },
+  { id: "reports", label: "Reports" },
+  { id: "settings", label: "Settings" }
 ];
 
-export function Shell({ companyName, userEmail, onLogout, children }: ShellProps) {
+export function Shell({
+  companyName,
+  userName,
+  userEmail,
+  activeView,
+  onNavigate,
+  onLogout,
+  children
+}: ShellProps) {
+  const activeLabel = navigationItems.find((item) => item.id === activeView)?.label ?? "Ares";
+
   return (
     <div className="app-shell">
       <aside className="app-sidebar">
@@ -28,11 +51,12 @@ export function Shell({ companyName, userEmail, onLogout, children }: ShellProps
         <nav className="app-nav">
           {navigationItems.map((item) => (
             <button
-              key={item}
-              className={`nav-item${item === "Dashboard" ? " active" : ""}`}
+              key={item.id}
+              className={`nav-item${item.id === activeView ? " active" : ""}`}
+              onClick={() => onNavigate(item.id)}
               type="button"
             >
-              {item}
+              {item.label}
             </button>
           ))}
         </nav>
@@ -40,15 +64,17 @@ export function Shell({ companyName, userEmail, onLogout, children }: ShellProps
 
       <main className="app-main">
         <header className="app-header">
-          <div>
-            <span className="eyebrow">Company</span>
+          <div className="header-copy">
+            <span className="eyebrow">{activeLabel}</span>
             <h2>{companyName}</h2>
+            <p>{activeLabel === "Settings" ? "Company, profile, and appearance controls." : "Backend-connected business workspace."}</p>
           </div>
 
-          <div className="session-card">
-            <div>
+          <div className="account-panel">
+            <div className="account-copy">
               <span className="eyebrow">Signed In</span>
-              <strong>{userEmail}</strong>
+              <strong>{userName}</strong>
+              <small>{userEmail}</small>
             </div>
 
             <button

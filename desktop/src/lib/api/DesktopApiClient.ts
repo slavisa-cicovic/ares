@@ -1,5 +1,10 @@
 import type { SessionData, LoginPayload, AuthResponse, AuthenticatedUser } from "../../features/auth/types";
-import type { ApiErrorPayload, ReportsSummary } from "./types";
+import type {
+  ApiErrorPayload,
+  CompanyResponse,
+  ReportsSummary,
+  UpdateCompanyPayload
+} from "./types";
 
 type SessionGetter = () => SessionData | null;
 type SessionSetter = (session: SessionData | null) => void;
@@ -80,6 +85,17 @@ export class DesktopApiClient {
 
   async getReportsSummary(): Promise<ReportsSummary> {
     return this.request<ReportsSummary>("/reports/summary");
+  }
+
+  async getCurrentCompany(): Promise<CompanyResponse> {
+    return this.request<CompanyResponse>("/company");
+  }
+
+  async updateCurrentCompany(payload: UpdateCompanyPayload): Promise<CompanyResponse> {
+    return this.request<CompanyResponse>("/company", {
+      method: "PUT",
+      body: JSON.stringify(payload)
+    });
   }
 
   private async request<T>(path: string, init?: RequestInit, retry = true): Promise<T> {

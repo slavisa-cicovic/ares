@@ -9,7 +9,7 @@ import {
 import { DesktopApiClient, ApiClientError } from "../../lib/api/DesktopApiClient";
 import { clearSession, loadSession, saveSession } from "./sessionStorage";
 import type { LoginPayload, SessionData } from "./types";
-import type { ReportsSummary } from "../../lib/api/types";
+import type { CompanyResponse, ReportsSummary, UpdateCompanyPayload } from "../../lib/api/types";
 
 type AuthState =
   | { status: "bootstrapping" }
@@ -21,6 +21,8 @@ type AuthContextValue = {
   login: (payload: LoginPayload) => Promise<void>;
   logout: () => Promise<void>;
   getReportsSummary: () => Promise<ReportsSummary>;
+  getCompany: () => Promise<CompanyResponse>;
+  updateCompany: (payload: UpdateCompanyPayload) => Promise<CompanyResponse>;
 };
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8080/api";
@@ -30,20 +32,22 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const [session, setSession] = useState<SessionData | null>(() => loadSession());
   const [state, setState] = useState<AuthState>({ status: "bootstrapping" });
 
+  function setStoredSession(nextSession: SessionData | null) {
+    if (nextSession) {
+      saveSession(nextSession);
+    } else {
+      clearSession();
+    }
+
+    setSession(nextSession);
+  }
+
   const client = useMemo(
     () =>
       new DesktopApiClient(
         apiBaseUrl,
         () => loadSession(),
-        (nextSession) => {
-          if (nextSession) {
-            saveSession(nextSession);
-          } else {
-            clearSession();
-          }
-
-          setSession(nextSession);
-        }
+        setStoredSession
       ),
     []
   );
@@ -94,6 +98,28 @@ export function AuthProvider({ children }: PropsWithChildren) {
     },
     getReportsSummary: async () => {
       return client.getReportsSummary();
+    },
+    getCompany: async () => {
+      return client.getCurrentCompany();
+    },
+    updateCompany: async (payload) => {
+      const updatedCompany = await client.updateCurrentCompany(payload);
+      const currentSession = loadSession();
+
+      if (currentSession) {
+        const nextSession = {
+          ...currentSession,
+          user: {
+            ...currentSession.user,
+            companyName: updatedCompany.name
+          }
+        };
+
+        setStoredSession(nextSession);
+        setState({ status: "authenticated", user: nextSession.user });
+      }
+
+      return updatedCompany;
     }
   };
 

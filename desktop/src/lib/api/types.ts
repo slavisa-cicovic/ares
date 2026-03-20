@@ -8,6 +8,16 @@ export type ReportsSummary = {
   paidInvoiceCount: number;
 };
 
+export type CompanyResponse = {
+  id: string;
+  name: string;
+  status: string;
+};
+
+export type UpdateCompanyPayload = {
+  name: string;
+};
+
 export type ApiErrorPayload = {
   message?: string;
 };
