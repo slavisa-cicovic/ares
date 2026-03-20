@@ -153,6 +153,9 @@ class AuthLoginIntegrationTests {
             .andExpect(jsonPath("$.refreshToken").isString())
             .andExpect(jsonPath("$.user.email").value("admin@local.ares"))
             .andExpect(jsonPath("$.user.companyName").value("Test Company"))
+            .andExpect(jsonPath("$.user.companyThemePreset").value("amber"))
+            .andExpect(jsonPath("$.user.companyBrandColor").value(org.hamcrest.Matchers.nullValue()))
+            .andExpect(jsonPath("$.user.companyLogoUrl").value(org.hamcrest.Matchers.nullValue()))
             .andExpect(jsonPath("$.user.roles[0]").value("company-admin"))
             .andExpect(jsonPath("$.user.platformAdmin").value(false));
     }
@@ -216,7 +219,8 @@ class AuthLoginIntegrationTests {
             .andExpect(jsonPath("$.email").value("superadmin@local.ares"))
             .andExpect(jsonPath("$.roles[0]").value("super-admin"))
             .andExpect(jsonPath("$.platformAdmin").value(true))
-            .andExpect(jsonPath("$.companyId").value(activeCompany.getId().toString()));
+            .andExpect(jsonPath("$.companyId").value(activeCompany.getId().toString()))
+            .andExpect(jsonPath("$.companyThemePreset").value("amber"));
     }
 
     @Test

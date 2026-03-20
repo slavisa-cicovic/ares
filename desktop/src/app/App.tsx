@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { CssBaseline, ThemeProvider } from "@mui/material";
 import { AuthProvider, useAuth } from "../features/auth/AuthProvider";
 import { DashboardScreen } from "../features/dashboard/DashboardScreen";
@@ -6,24 +6,13 @@ import { LoginScreen } from "../features/auth/LoginScreen";
 import { PlaceholderScreen } from "../features/navigation/PlaceholderScreen";
 import { SettingsScreen } from "../features/settings/SettingsScreen";
 import { ClientsScreen } from "../features/clients/ClientsScreen";
-import { loadThemePreference, saveThemePreference, type DesktopTheme } from "../features/settings/themeStorage";
+import { normalizeDesktopTheme } from "../features/settings/themeStorage";
 import { Shell, type AppView } from "./Shell";
 import { createAppTheme } from "../theme/createAppTheme";
 
 function AppContent() {
   const { state, logout } = useAuth();
   const [activeView, setActiveView] = useState<AppView>("dashboard");
-  const [theme, setTheme] = useState<DesktopTheme>(() => loadThemePreference());
-  const muiTheme = createAppTheme(theme);
-
-  useEffect(() => {
-    document.documentElement.dataset.theme = theme;
-  }, [theme]);
-
-  function handleThemeChange(nextTheme: DesktopTheme) {
-    saveThemePreference(nextTheme);
-    setTheme(nextTheme);
-  }
 
   if (state.status === "bootstrapping") {
     return <div className="screen-state">Restoring session...</div>;
@@ -33,11 +22,15 @@ function AppContent() {
     return <LoginScreen />;
   }
 
+  const themePreset = normalizeDesktopTheme(state.user.companyThemePreset);
+  const muiTheme = createAppTheme(themePreset, state.user.companyBrandColor);
+
   return (
     <ThemeProvider theme={muiTheme}>
       <CssBaseline />
       <Shell
         activeView={activeView}
+        companyLogoUrl={state.user.companyLogoUrl}
         companyName={state.user.companyName}
         onNavigate={setActiveView}
         userEmail={state.user.email}
@@ -45,9 +38,7 @@ function AppContent() {
         onLogout={logout}
       >
         {activeView === "dashboard" ? <DashboardScreen /> : null}
-        {activeView === "settings" ? (
-          <SettingsScreen onThemeChange={handleThemeChange} theme={theme} user={state.user} />
-        ) : null}
+        {activeView === "settings" ? <SettingsScreen user={state.user} /> : null}
         {activeView === "clients" ? <ClientsScreen user={state.user} /> : null}
         {activeView === "items" ? (
           <PlaceholderScreen

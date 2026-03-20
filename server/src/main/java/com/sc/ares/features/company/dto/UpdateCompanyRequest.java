@@ -18,6 +18,11 @@ public record UpdateCompanyRequest(
     @Size(max = 64)
     String phone,
     @Size(max = 128)
-    String bankAccount
+    String bankAccount,
+    String brandColor,
+    @Size(max = 512)
+    String logoUrl,
+    @Size(max = 32)
+    String themePreset
 ) {
 }

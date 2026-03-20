@@ -11,6 +11,27 @@ export type ThemePreset = {
   themeOptions: ThemeOptions;
 };
 
+function applyBrandColor(preset: ThemePreset, brandColor?: string | null): ThemePreset {
+  if (!brandColor || !/^#[0-9A-Fa-f]{6}$/.test(brandColor)) {
+    return preset;
+  }
+
+  return {
+    ...preset,
+    shellSelectedGradient: `linear-gradient(135deg, ${brandColor} 0%, ${brandColor}CC 100%)`,
+    themeOptions: {
+      ...preset.themeOptions,
+      palette: {
+        ...preset.themeOptions.palette,
+        primary: {
+          ...preset.themeOptions.palette?.primary,
+          main: brandColor
+        }
+      }
+    }
+  };
+}
+
 function amberPreset(): ThemePreset {
   return {
     id: "amber",
@@ -95,14 +116,19 @@ function graphitePreset(): ThemePreset {
   };
 }
 
-export function resolveThemePreset(theme: DesktopTheme): ThemePreset {
+export function resolveThemePreset(
+  theme: DesktopTheme,
+  brandColor?: string | null
+): ThemePreset {
+  let preset: ThemePreset;
+
   if (theme === "ocean") {
-    return oceanPreset();
+    preset = oceanPreset();
+  } else if (theme === "graphite") {
+    preset = graphitePreset();
+  } else {
+    preset = amberPreset();
   }
 
-  if (theme === "graphite") {
-    return graphitePreset();
-  }
-
-  return amberPreset();
+  return applyBrandColor(preset, brandColor);
 }

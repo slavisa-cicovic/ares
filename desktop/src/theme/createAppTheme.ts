@@ -6,8 +6,8 @@ import { resolveThemePreset } from "./presets";
 import { shadows } from "./shadows";
 import { typography } from "./typography";
 
-export function createAppTheme(mode: DesktopTheme): Theme {
-  const preset = resolveThemePreset(mode);
+export function createAppTheme(mode: DesktopTheme, brandColor?: string | null): Theme {
+  const preset = resolveThemePreset(mode, brandColor);
   const themeCore = createTheme({
     ...preset.themeOptions,
     shape: { borderRadius: 18 },

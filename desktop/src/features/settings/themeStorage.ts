@@ -1,20 +1,11 @@
 export type DesktopTheme = "amber" | "ocean" | "graphite";
 
-const storageKey = "ares.desktop.theme";
-const defaultTheme: DesktopTheme = "amber";
-
 const allowedThemes = new Set<DesktopTheme>(["amber", "ocean", "graphite"]);
 
-export function loadThemePreference(): DesktopTheme {
-  const raw = window.localStorage.getItem(storageKey);
-
-  if (raw && allowedThemes.has(raw as DesktopTheme)) {
-    return raw as DesktopTheme;
+export function normalizeDesktopTheme(value: string | null | undefined): DesktopTheme {
+  if (value && allowedThemes.has(value as DesktopTheme)) {
+    return value as DesktopTheme;
   }
 
-  return defaultTheme;
-}
-
-export function saveThemePreference(theme: DesktopTheme): void {
-  window.localStorage.setItem(storageKey, theme);
+  return "amber";
 }

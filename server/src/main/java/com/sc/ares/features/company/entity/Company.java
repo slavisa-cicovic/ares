@@ -40,6 +40,16 @@ public class Company {
     @Column(name = "bank_account", length = 128)
     private String bankAccount;
 
+    @Column(name = "brand_color", length = 7)
+    private String brandColor;
+
+    @Column(name = "logo_url", length = 512)
+    private String logoUrl;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "theme_preset", nullable = false, length = 32)
+    private CompanyThemePreset themePreset;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 32)
     private CompanyStatus status;
@@ -61,6 +71,7 @@ public class Company {
 
         Company company = new Company();
         company.name = name;
+        company.themePreset = CompanyThemePreset.AMBER;
         company.status = status;
         company.createdAt = now;
         company.updatedAt = now;
@@ -100,6 +111,18 @@ public class Company {
         return bankAccount;
     }
 
+    public String getBrandColor() {
+        return brandColor;
+    }
+
+    public String getLogoUrl() {
+        return logoUrl;
+    }
+
+    public CompanyThemePreset getThemePreset() {
+        return themePreset;
+    }
+
     public CompanyStatus getStatus() {
         return status;
     }
@@ -125,7 +148,10 @@ public class Company {
         String address,
         String email,
         String phone,
-        String bankAccount
+        String bankAccount,
+        String brandColor,
+        String logoUrl,
+        CompanyThemePreset themePreset
     ) {
         this.name = name;
         this.pib = pib;
@@ -134,6 +160,9 @@ public class Company {
         this.email = email;
         this.phone = phone;
         this.bankAccount = bankAccount;
+        this.brandColor = brandColor;
+        this.logoUrl = logoUrl;
+        this.themePreset = themePreset;
         this.updatedAt = Instant.now();
     }
 

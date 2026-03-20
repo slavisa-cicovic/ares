@@ -63,6 +63,9 @@ public class DatabaseUserDetailsService implements UserDetailsService {
             user.getFirstName(),
             user.getLastName(),
             user.getCompany().getName(),
+            user.getCompany().getBrandColor(),
+            user.getCompany().getLogoUrl(),
+            user.getCompany().getThemePreset().toApiValue(),
             roleCodes,
             isLoginEnabled(user, user.getCompany())
         );

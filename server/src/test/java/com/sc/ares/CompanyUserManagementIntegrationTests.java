@@ -126,7 +126,10 @@ class CompanyUserManagementIntegrationTests {
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.name").value("Alpha Company"))
             .andExpect(jsonPath("$.pib").value(Matchers.nullValue()))
-            .andExpect(jsonPath("$.bankAccount").value(Matchers.nullValue()));
+            .andExpect(jsonPath("$.bankAccount").value(Matchers.nullValue()))
+            .andExpect(jsonPath("$.brandColor").value(Matchers.nullValue()))
+            .andExpect(jsonPath("$.logoUrl").value(Matchers.nullValue()))
+            .andExpect(jsonPath("$.themePreset").value("amber"));
 
         mockMvc.perform(
                 put("/company")
@@ -139,7 +142,10 @@ class CompanyUserManagementIntegrationTests {
                         "address", "Main Street 1",
                         "email", "office@alpha.local",
                         "phone", "+38160123456",
-                        "bankAccount", "160-123456-78"
+                        "bankAccount", "160-123456-78",
+                        "brandColor", "#4B8AB4",
+                        "logoUrl", "https://cdn.local/alpha.png",
+                        "themePreset", "ocean"
                     )))
             )
             .andExpect(status().isOk())
@@ -149,7 +155,10 @@ class CompanyUserManagementIntegrationTests {
             .andExpect(jsonPath("$.address").value("Main Street 1"))
             .andExpect(jsonPath("$.email").value("office@alpha.local"))
             .andExpect(jsonPath("$.phone").value("+38160123456"))
-            .andExpect(jsonPath("$.bankAccount").value("160-123456-78"));
+            .andExpect(jsonPath("$.bankAccount").value("160-123456-78"))
+            .andExpect(jsonPath("$.brandColor").value("#4B8AB4"))
+            .andExpect(jsonPath("$.logoUrl").value("https://cdn.local/alpha.png"))
+            .andExpect(jsonPath("$.themePreset").value("ocean"));
     }
 
     @Test
@@ -167,7 +176,10 @@ class CompanyUserManagementIntegrationTests {
                         "address", "  Address  ",
                         "email", "  office@alpha.local  ",
                         "phone", "  +38160123456  ",
-                        "bankAccount", "   "
+                        "bankAccount", "   ",
+                        "brandColor", "  #B7844F  ",
+                        "logoUrl", "  https://cdn.local/logo.png  ",
+                        "themePreset", "graphite"
                     )))
             )
             .andExpect(status().isOk())
@@ -177,7 +189,28 @@ class CompanyUserManagementIntegrationTests {
             .andExpect(jsonPath("$.address").value("Address"))
             .andExpect(jsonPath("$.email").value("office@alpha.local"))
             .andExpect(jsonPath("$.phone").value("+38160123456"))
-            .andExpect(jsonPath("$.bankAccount").value(Matchers.nullValue()));
+            .andExpect(jsonPath("$.bankAccount").value(Matchers.nullValue()))
+            .andExpect(jsonPath("$.brandColor").value("#B7844F"))
+            .andExpect(jsonPath("$.logoUrl").value("https://cdn.local/logo.png"))
+            .andExpect(jsonPath("$.themePreset").value("graphite"));
+
+    }
+
+    @Test
+    void companyAdminShouldRejectInvalidBrandColor() throws Exception {
+        String token = login("admin.one@local.ares", "ares-test").get("accessToken").asText();
+
+        mockMvc.perform(
+                put("/company")
+                    .header("Authorization", bearer(token))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(Map.of(
+                        "name", "Alpha Company Updated",
+                        "brandColor", "blue"
+                    )))
+            )
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.message").value("Invalid brand color."));
     }
 
     @Test

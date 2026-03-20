@@ -1,6 +1,7 @@
 import type { PropsWithChildren } from "react";
 import {
   AppBar,
+  Avatar,
   Box,
   Button,
   Drawer,
@@ -24,6 +25,7 @@ export type AppView =
 
 type ShellProps = PropsWithChildren<{
   companyName: string;
+  companyLogoUrl: string | null;
   userName: string;
   userEmail: string;
   activeView: AppView;
@@ -45,6 +47,7 @@ const drawerWidth = 280;
 
 export function Shell({
   companyName,
+  companyLogoUrl,
   userName,
   userEmail,
   activeView,
@@ -99,12 +102,11 @@ export function Shell({
         <AppBar position="static" sx={{ borderBottom: "1px solid", borderColor: "divider" }}>
           <Toolbar sx={{ alignItems: "center", gap: 3, justifyContent: "space-between", py: 2 }}>
             <Stack alignItems="center" direction="row" spacing={2} alignSelf="center">
-              <Box
+              <Avatar
+                src={companyLogoUrl ?? undefined}
                 sx={{
                   width: 52,
                   height: 52,
-                  display: "grid",
-                  placeItems: "center",
                   borderRadius: 2.5,
                   bgcolor: "primary.main",
                   color: "primary.contrastText",
@@ -113,9 +115,14 @@ export function Shell({
                 }}
               >
                 {companyName.charAt(0).toUpperCase()}
-              </Box>
+              </Avatar>
 
-              <Typography variant="h5">{companyName}</Typography>
+              <Stack spacing={0.25}>
+                <Typography color="primary.main" variant="overline">
+                  Active Company
+                </Typography>
+                <Typography variant="h5">{companyName}</Typography>
+              </Stack>
             </Stack>
 
             <Paper

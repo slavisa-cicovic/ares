@@ -12,6 +12,9 @@ public class AresUserDetails implements UserDetails {
     private final String firstName;
     private final String lastName;
     private final String companyName;
+    private final String companyBrandColor;
+    private final String companyLogoUrl;
+    private final String companyThemePreset;
     private final List<String> roleCodes;
     private final boolean enabled;
 
@@ -21,6 +24,9 @@ public class AresUserDetails implements UserDetails {
         String firstName,
         String lastName,
         String companyName,
+        String companyBrandColor,
+        String companyLogoUrl,
+        String companyThemePreset,
         List<String> roleCodes,
         boolean enabled
     ) {
@@ -29,6 +35,9 @@ public class AresUserDetails implements UserDetails {
         this.firstName = firstName;
         this.lastName = lastName;
         this.companyName = companyName;
+        this.companyBrandColor = companyBrandColor;
+        this.companyLogoUrl = companyLogoUrl;
+        this.companyThemePreset = companyThemePreset;
         this.roleCodes = List.copyOf(roleCodes);
         this.enabled = enabled;
     }
@@ -47,6 +56,18 @@ public class AresUserDetails implements UserDetails {
 
     public String getCompanyName() {
         return companyName;
+    }
+
+    public String getCompanyBrandColor() {
+        return companyBrandColor;
+    }
+
+    public String getCompanyLogoUrl() {
+        return companyLogoUrl;
+    }
+
+    public String getCompanyThemePreset() {
+        return companyThemePreset;
     }
 
     public List<String> getRoleCodes() {

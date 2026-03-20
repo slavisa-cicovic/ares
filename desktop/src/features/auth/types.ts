@@ -5,6 +5,9 @@ export type AuthenticatedUser = {
   lastName: string;
   companyId: string;
   companyName: string;
+  companyBrandColor: string | null;
+  companyLogoUrl: string | null;
+  companyThemePreset: string;
   platformAdmin: boolean;
   roles: string[];
 };

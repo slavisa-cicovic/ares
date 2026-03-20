@@ -124,7 +124,10 @@ export function AuthProvider({ children }: PropsWithChildren) {
           ...currentSession,
           user: {
             ...currentSession.user,
-            companyName: updatedCompany.name
+            companyName: updatedCompany.name,
+            companyBrandColor: updatedCompany.brandColor,
+            companyLogoUrl: updatedCompany.logoUrl,
+            companyThemePreset: updatedCompany.themePreset
           }
         };
 

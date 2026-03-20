@@ -3,20 +3,17 @@ import type { AuthenticatedUser } from "../auth/types";
 import type { ChangePasswordPayload, CompanyResponse, UpdateCompanyPayload } from "../../lib/api/types";
 import { ApiClientError } from "../../lib/api/DesktopApiClient";
 import { useAuth } from "../auth/AuthProvider";
-import type { DesktopTheme } from "./themeStorage";
+import { normalizeDesktopTheme, type DesktopTheme } from "./themeStorage";
 
-type SettingsSection = "company" | "profile" | "appearance";
+type SettingsSection = "company" | "profile";
 
 type SettingsScreenProps = {
   user: AuthenticatedUser;
-  theme: DesktopTheme;
-  onThemeChange: (theme: DesktopTheme) => void;
 };
 
 const settingsSections: Array<{ id: SettingsSection; label: string; description: string }> = [
   { id: "company", label: "Company", description: "Tenant identity, legal info, and branding." },
-  { id: "profile", label: "Profile", description: "Your personal account and security settings." },
-  { id: "appearance", label: "Appearance", description: "Choose how the desktop workspace looks." }
+  { id: "profile", label: "Profile", description: "Your personal account and security settings." }
 ];
 
 const themeOptions: Array<{ id: DesktopTheme; label: string; description: string }> = [
@@ -33,7 +30,7 @@ function toFormValue(value: string | null | undefined): string {
   return value ?? "";
 }
 
-export function SettingsScreen({ user, theme, onThemeChange }: SettingsScreenProps) {
+export function SettingsScreen({ user }: SettingsScreenProps) {
   const { getCompany, updateCompany, changePassword } = useAuth();
   const [activeSection, setActiveSection] = useState<SettingsSection>("company");
   const [company, setCompany] = useState<CompanyResponse | null>(null);
@@ -42,10 +39,13 @@ export function SettingsScreen({ user, theme, onThemeChange }: SettingsScreenPro
     pib: null,
     mb: null,
     address: null,
-    email: null,
-    phone: null,
-    bankAccount: null
-  });
+      email: null,
+      phone: null,
+      bankAccount: null,
+      brandColor: user.companyBrandColor,
+      logoUrl: user.companyLogoUrl,
+      themePreset: normalizeDesktopTheme(user.companyThemePreset)
+    });
   const [companyLoading, setCompanyLoading] = useState(true);
   const [companySaving, setCompanySaving] = useState(false);
   const [companyError, setCompanyError] = useState<string | null>(null);
@@ -78,7 +78,10 @@ export function SettingsScreen({ user, theme, onThemeChange }: SettingsScreenPro
           address: response.address,
           email: response.email,
           phone: response.phone,
-          bankAccount: response.bankAccount
+          bankAccount: response.bankAccount,
+          brandColor: response.brandColor,
+          logoUrl: response.logoUrl,
+          themePreset: normalizeDesktopTheme(response.themePreset)
         });
         setCompanyLoading(false);
       })
@@ -116,9 +119,12 @@ export function SettingsScreen({ user, theme, onThemeChange }: SettingsScreenPro
         address: updatedCompany.address,
         email: updatedCompany.email,
         phone: updatedCompany.phone,
-        bankAccount: updatedCompany.bankAccount
+        bankAccount: updatedCompany.bankAccount,
+        brandColor: updatedCompany.brandColor,
+        logoUrl: updatedCompany.logoUrl,
+        themePreset: normalizeDesktopTheme(updatedCompany.themePreset)
       });
-      setCompanyNotice("Company profile updated.");
+      setCompanyNotice("Company profile and branding updated.");
     } catch (requestError) {
       setCompanyError(
         requestError instanceof ApiClientError
@@ -139,7 +145,10 @@ export function SettingsScreen({ user, theme, onThemeChange }: SettingsScreenPro
         address: company.address,
         email: company.email,
         phone: company.phone,
-        bankAccount: company.bankAccount
+        bankAccount: company.bankAccount,
+        brandColor: company.brandColor,
+        logoUrl: company.logoUrl,
+        themePreset: normalizeDesktopTheme(company.themePreset)
       });
     }
 
@@ -285,10 +294,54 @@ export function SettingsScreen({ user, theme, onThemeChange }: SettingsScreenPro
                   />
                 </label>
 
+                <label className="field">
+                  <span>Theme Preset</span>
+                  <select
+                    disabled={!isCompanyAdmin || companyLoading || companySaving}
+                    onChange={(event) =>
+                      setCompanyForm((current) => ({
+                        ...current,
+                        themePreset: normalizeDesktopTheme(event.target.value)
+                      }))
+                    }
+                    value={companyForm.themePreset}
+                  >
+                    {themeOptions.map((option) => (
+                      <option key={option.id} value={option.id}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label className="field">
+                  <span>Brand Color</span>
+                  <input
+                    disabled={!isCompanyAdmin || companyLoading || companySaving}
+                    onChange={(event) =>
+                      setCompanyForm((current) => ({ ...current, brandColor: event.target.value || null }))
+                    }
+                    placeholder="#B7844F"
+                    value={toFormValue(companyForm.brandColor)}
+                  />
+                </label>
+
+                <label className="field field-span-2">
+                  <span>Logo URL</span>
+                  <input
+                    disabled={!isCompanyAdmin || companyLoading || companySaving}
+                    onChange={(event) =>
+                      setCompanyForm((current) => ({ ...current, logoUrl: event.target.value || null }))
+                    }
+                    placeholder="https://..."
+                    value={toFormValue(companyForm.logoUrl)}
+                  />
+                </label>
+
                 <div className="settings-upload-placeholder">
                   <span className="eyebrow">Branding</span>
-                  <strong>Company Logo</strong>
-                  <p>Logo upload will be enabled when asset storage and backend support are ready.</p>
+                  <strong>Company Workspace Identity</strong>
+                  <p>Branding now drives desktop workspace appearance so accountants can distinguish companies faster.</p>
                 </div>
               </div>
 
@@ -407,45 +460,6 @@ export function SettingsScreen({ user, theme, onThemeChange }: SettingsScreenPro
                 </div>
               </div>
             </form>
-          </div>
-        ) : null}
-
-        {activeSection === "appearance" ? (
-          <div className="settings-section-stack">
-            <div className="screen-intro">
-              <span className="eyebrow">Settings</span>
-              <h3>Appearance</h3>
-              <p>Desktop theme selection starts locally and can later become a backend-backed preference.</p>
-            </div>
-
-            <div className="settings-card">
-              <div className="settings-card-header">
-                <div>
-                  <span className="eyebrow">Theme</span>
-                  <h4>Workspace look and feel</h4>
-                </div>
-              </div>
-
-              <div className="theme-grid">
-                {themeOptions.map((option) => (
-                  <button
-                    key={option.id}
-                    className={`theme-card${theme === option.id ? " active" : ""}`}
-                    onClick={() => onThemeChange(option.id)}
-                    type="button"
-                  >
-                    <span className="eyebrow">{option.label}</span>
-                    <strong>{option.description}</strong>
-                  </button>
-                ))}
-              </div>
-
-              <div className="feature-placeholder-card compact">
-                <span className="eyebrow">Future</span>
-                <strong>Invoice Templates</strong>
-                <p>PDF template selection and customization will later live under settings.</p>
-              </div>
-            </div>
           </div>
         ) : null}
       </section>

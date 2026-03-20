@@ -20,6 +20,9 @@ public class AuthResponseFactory {
             userDetails.getLastName(),
             principal.companyId(),
             userDetails.getCompanyName(),
+            userDetails.getCompanyBrandColor(),
+            userDetails.getCompanyLogoUrl(),
+            userDetails.getCompanyThemePreset(),
             userDetails.getRoleCodes(),
             principal.platformAdmin()
         );

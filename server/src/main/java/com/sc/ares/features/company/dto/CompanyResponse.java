@@ -11,6 +11,9 @@ public record CompanyResponse(
     String email,
     String phone,
     String bankAccount,
+    String brandColor,
+    String logoUrl,
+    String themePreset,
     String status
 ) {
 }

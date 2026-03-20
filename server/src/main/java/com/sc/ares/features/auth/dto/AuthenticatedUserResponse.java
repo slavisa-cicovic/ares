@@ -10,6 +10,9 @@ public record AuthenticatedUserResponse(
     String lastName,
     UUID companyId,
     String companyName,
+    String companyBrandColor,
+    String companyLogoUrl,
+    String companyThemePreset,
     List<String> roles,
     boolean platformAdmin
 ) {

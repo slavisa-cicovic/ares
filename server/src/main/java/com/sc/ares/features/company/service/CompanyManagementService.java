@@ -4,6 +4,7 @@ import com.sc.ares.common.api.ApiBadRequestException;
 import com.sc.ares.features.company.dto.CompanyResponse;
 import com.sc.ares.features.company.dto.UpdateCompanyRequest;
 import com.sc.ares.features.company.entity.Company;
+import com.sc.ares.features.company.entity.CompanyThemePreset;
 import com.sc.ares.features.company.repository.CompanyRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -12,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class CompanyManagementService {
 
     private static final String SIMPLE_EMAIL_PATTERN = "^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$";
+    private static final String HEX_COLOR_PATTERN = "^#[0-9A-Fa-f]{6}$";
 
     private final CompanyAdminAccessService companyAdminAccessService;
     private final CompanyRepository companyRepository;
@@ -39,7 +41,10 @@ public class CompanyManagementService {
             normalizeOptional(request.address()),
             normalizeOptionalEmail(request.email()),
             normalizeOptional(request.phone()),
-            normalizeOptional(request.bankAccount())
+            normalizeOptional(request.bankAccount()),
+            normalizeOptionalBrandColor(request.brandColor()),
+            normalizeOptional(request.logoUrl()),
+            normalizeThemePreset(request.themePreset())
         );
         companyRepository.save(company);
 
@@ -56,6 +61,9 @@ public class CompanyManagementService {
             company.getEmail(),
             company.getPhone(),
             company.getBankAccount(),
+            company.getBrandColor(),
+            company.getLogoUrl(),
+            company.getThemePreset().toApiValue(),
             company.getStatus().name()
         );
     }
@@ -91,5 +99,27 @@ public class CompanyManagementService {
         }
 
         return normalized;
+    }
+
+    private String normalizeOptionalBrandColor(String value) {
+        String normalized = normalizeOptional(value);
+
+        if (normalized == null) {
+            return null;
+        }
+
+        if (!normalized.matches(HEX_COLOR_PATTERN)) {
+            throw new ApiBadRequestException("Invalid brand color.");
+        }
+
+        return normalized.toUpperCase();
+    }
+
+    private CompanyThemePreset normalizeThemePreset(String value) {
+        try {
+            return CompanyThemePreset.fromApiValue(value);
+        } catch (IllegalArgumentException exception) {
+            throw new ApiBadRequestException("Invalid company theme preset.");
+        }
     }
 }

@@ -7,6 +7,9 @@ export type CompanyResponse = {
   email: string | null;
   phone: string | null;
   bankAccount: string | null;
+  brandColor: string | null;
+  logoUrl: string | null;
+  themePreset: string;
   status: string;
 };
 
@@ -18,4 +21,7 @@ export type UpdateCompanyPayload = {
   email: string | null;
   phone: string | null;
   bankAccount: string | null;
+  brandColor: string | null;
+  logoUrl: string | null;
+  themePreset: string;
 };
