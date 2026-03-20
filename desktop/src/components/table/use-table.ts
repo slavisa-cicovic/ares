@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type ChangeEvent } from "react";
 import type { TableOrder, TableState, UseTableProps } from "./types";
 
 export function useTable(props?: UseTableProps): TableState {
@@ -27,7 +27,7 @@ export function useTable(props?: UseTableProps): TableState {
     setSelected(newSelected);
   }
 
-  function onChangeRowsPerPage(event: React.ChangeEvent<HTMLSelectElement>) {
+  function onChangeRowsPerPage(event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) {
     setPage(0);
     setRowsPerPage(Number.parseInt(event.target.value, 10));
   }

@@ -1,13 +1,33 @@
 import { useEffect, useState } from "react";
+import AddRoundedIcon from "@mui/icons-material/AddRounded";
+import EditRoundedIcon from "@mui/icons-material/EditRounded";
+import RefreshRoundedIcon from "@mui/icons-material/RefreshRounded";
 import {
-  TableEmptyRows,
-  TableHeadCustom,
-  TableNoData,
-  TablePaginationCustom,
-  TableSkeleton,
+  Alert,
+  Box,
+  Button,
+  Chip,
+  FormControl,
+  InputLabel,
+  MenuItem,
+  Paper,
+  Select,
+  type SelectChangeEvent,
+  Stack,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TablePagination,
+  TableRow,
+  TableSortLabel,
+  TextField,
+  Typography
+} from "@mui/material";
+import {
   emptyRows,
-  useTable,
-  type TableHeadCell
+  useTable
 } from "../../components/table";
 import { ApiClientError } from "../../lib/api/DesktopApiClient";
 import type { ClientStatus, ClientSummary, PagedResponse } from "../../lib/api/types";
@@ -19,16 +39,16 @@ type ClientsScreenProps = {
   user: AuthenticatedUser;
 };
 
-const headCells: TableHeadCell[] = [
-  { id: "name", label: "Name", minWidth: 220 },
-  { id: "pib", label: "PIB", sortable: false, minWidth: 120 },
-  { id: "mb", label: "MB", sortable: false, minWidth: 120 },
-  { id: "email", label: "Email", minWidth: 220 },
-  { id: "phone", label: "Phone", sortable: false, minWidth: 160 },
-  { id: "location", label: "Location", sortable: false, minWidth: 220 },
-  { id: "status", label: "Status", minWidth: 120 },
-  { id: "actions", label: "Actions", sortable: false, align: "right", minWidth: 140 }
-];
+const headCells = [
+  { id: "name", label: "Name", minWidth: 220, sortable: true, align: undefined },
+  { id: "pib", label: "PIB", minWidth: 120, sortable: false, align: undefined },
+  { id: "mb", label: "MB", minWidth: 120, sortable: false, align: undefined },
+  { id: "email", label: "Email", minWidth: 220, sortable: true, align: undefined },
+  { id: "phone", label: "Phone", minWidth: 160, sortable: false, align: undefined },
+  { id: "location", label: "Location", minWidth: 220, sortable: false, align: undefined },
+  { id: "status", label: "Status", minWidth: 120, sortable: true, align: undefined },
+  { id: "actions", label: "Actions", minWidth: 140, sortable: false, align: "right" as const }
+] as const;
 
 const emptyPage: PagedResponse<ClientSummary> = {
   items: [],
@@ -123,7 +143,7 @@ export function ClientsScreen({ user }: ClientsScreenProps) {
     table.onResetPage();
   }
 
-  function handleStatusChange(event: React.ChangeEvent<HTMLSelectElement>) {
+  function handleStatusChange(event: SelectChangeEvent<"" | ClientStatus>) {
     setStatus(event.target.value as "" | ClientStatus);
     table.onResetPage();
   }
@@ -148,145 +168,183 @@ export function ClientsScreen({ user }: ClientsScreenProps) {
   }
 
   return (
-    <div className="module-screen">
-      <div className="screen-intro">
-        <span className="eyebrow">Clients</span>
-        <h3>Client directory</h3>
-      </div>
+    <Stack spacing={3}>
+      <Box>
+        <Typography color="primary.main" sx={{ letterSpacing: "0.14em", textTransform: "uppercase" }} variant="overline">
+          Clients
+        </Typography>
+        <Typography variant="h4">Client directory</Typography>
+      </Box>
 
-      <div className="module-card">
-        <div className="module-toolbar">
-          <div className="module-toolbar-group module-toolbar-group-grow">
-            <label className="field">
-              <span>Search</span>
-              <input
+      <Paper sx={{ borderRadius: 3, p: 3 }} variant="outlined">
+        <Stack spacing={3}>
+          <Stack
+            alignItems={{ md: "flex-end" }}
+            direction={{ xs: "column", md: "row" }}
+            justifyContent="space-between"
+            spacing={2}
+          >
+            <Stack direction={{ xs: "column", md: "row" }} spacing={2} sx={{ flex: 1 }}>
+              <TextField
+                fullWidth
+                label="Search"
                 onChange={handleSearchChange}
                 placeholder="Search by name, PIB, MB, email, phone, or address"
                 value={search}
               />
-            </label>
 
-            <label className="field module-filter-field">
-              <span>Status</span>
-              <select onChange={handleStatusChange} value={status}>
-                <option value="">All</option>
-                <option value="ACTIVE">Active</option>
-                <option value="INACTIVE">Inactive</option>
-              </select>
-            </label>
-          </div>
+              <FormControl sx={{ minWidth: 180 }}>
+                <InputLabel id="clients-status-label">Status</InputLabel>
+                <Select
+                  label="Status"
+                  labelId="clients-status-label"
+                  onChange={handleStatusChange}
+                  value={status}
+                >
+                  <MenuItem value="">All</MenuItem>
+                  <MenuItem value="ACTIVE">Active</MenuItem>
+                  <MenuItem value="INACTIVE">Inactive</MenuItem>
+                </Select>
+              </FormControl>
+            </Stack>
 
-          <div className="module-toolbar-group">
-            {isCompanyAdmin ? (
-              <button className="primary-button" onClick={handleCreate} type="button">
-                New Client
-              </button>
-            ) : null}
-            <button className="secondary-button" onClick={handleRefresh} type="button">
-              Refresh
-            </button>
-            {!isCompanyAdmin ? <span className="muted-note">Read-only access.</span> : null}
-          </div>
-        </div>
+            <Stack direction="row" spacing={1.5}>
+              {isCompanyAdmin ? (
+                <Button onClick={handleCreate} startIcon={<AddRoundedIcon />} variant="contained">
+                  New Client
+                </Button>
+              ) : null}
+              <Button onClick={handleRefresh} startIcon={<RefreshRoundedIcon />} variant="outlined">
+                Refresh
+              </Button>
+            </Stack>
+          </Stack>
 
-        {error ? <div className="error-banner inline-banner">{error}</div> : null}
+          {error ? <Alert severity="error">{error}</Alert> : null}
 
-        <div className="module-meta-row">
-          <span className="muted-note">
+          <Typography color="text.secondary" variant="body2">
             {totalElements} {totalElements === 1 ? "client" : "clients"} in this company
-          </span>
-        </div>
+          </Typography>
 
-        <div className="ui-table-wrapper">
-          <table className="ui-table">
-            <TableHeadCustom
-              headLabel={headCells}
-              onSort={table.onSort}
-              order={table.order}
-              orderBy={table.orderBy}
-            />
-
-            <tbody>
-              {isLoading
-                ? Array.from({ length: table.rowsPerPage }).map((_, index) => (
-                    <TableSkeleton key={`skeleton-${index}`} colSpan={headCells.length} />
-                  ))
-                : null}
-
-              {!isLoading && rows.length === 0 ? (
-                <TableNoData
-                  colSpan={headCells.length}
-                  notFound
-                  title={
-                    search || status
-                      ? "No clients match the current filters."
-                      : "No clients have been created yet."
-                  }
-                />
-              ) : null}
-
-              {!isLoading
-                ? rows.map((client) => (
-                    <tr key={client.id}>
-                      <td>
-                        <div className="table-primary-cell">
-                          <strong>{client.name}</strong>
-                          <span>{renderNullable(client.address)}</span>
-                        </div>
-                      </td>
-                      <td>{renderNullable(client.pib)}</td>
-                      <td>{renderNullable(client.mb)}</td>
-                      <td>{renderNullable(client.email)}</td>
-                      <td>{renderNullable(client.phone)}</td>
-                      <td>{formatLocation(client) || "—"}</td>
-                      <td>
-                        <span
-                          className={`table-status-pill ${client.status === "ACTIVE" ? "active" : "inactive"}`}
+          <TableContainer sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2 }}>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  {headCells.map((cell) => (
+                    <TableCell
+                      align={cell.align}
+                      key={cell.id}
+                      sx={{ minWidth: cell.minWidth }}
+                    >
+                      {cell.sortable ? (
+                        <TableSortLabel
+                          active={table.orderBy === cell.id}
+                          direction={table.orderBy === cell.id ? table.order : "asc"}
+                          onClick={() => table.onSort(cell.id)}
                         >
-                          {client.status === "ACTIVE" ? "Active" : "Inactive"}
-                        </span>
-                      </td>
-                      <td className="table-actions-cell">
-                        {isCompanyAdmin ? (
-                          <button
-                            className="secondary-button"
-                            onClick={() => handleEdit(client)}
-                            type="button"
-                          >
-                            Edit
-                          </button>
-                        ) : (
-                          <span className="muted-note">View only</span>
-                        )}
-                      </td>
-                    </tr>
-                  ))
-                : null}
+                          {cell.label}
+                        </TableSortLabel>
+                      ) : (
+                        cell.label
+                      )}
+                    </TableCell>
+                  ))}
+                </TableRow>
+              </TableHead>
 
-              {!isLoading && emptyRowsCount > 0 ? (
-                <TableEmptyRows
-                  colSpan={headCells.length}
-                  emptyRows={emptyRowsCount}
-                  height={table.dense ? 52 : 66}
-                />
-              ) : null}
-            </tbody>
-          </table>
-        </div>
+              <TableBody>
+                {isLoading
+                  ? Array.from({ length: table.rowsPerPage }).map((_, index) => (
+                      <TableRow key={`skeleton-${index}`}>
+                        <TableCell colSpan={headCells.length}>
+                          <Box sx={{ py: 1 }}>
+                            <div className="ui-table-skeleton" />
+                          </Box>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  : null}
 
-        <TablePaginationCustom
-          count={totalElements}
-          dense={table.dense}
-          denseVisible
-          note=""
-          onChangeDense={table.onChangeDense}
-          onChangePage={table.onChangePage}
-          onChangeRowsPerPage={table.onChangeRowsPerPage}
-          page={table.page}
-          rowsPerPage={table.rowsPerPage}
-          rowsPerPageOptions={[10, 20, 50]}
-        />
-      </div>
+                {!isLoading && rows.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={headCells.length}>
+                      <Typography align="center" color="text.secondary" sx={{ py: 4 }} variant="body2">
+                        {search || status
+                          ? "No clients match the current filters."
+                          : "No clients have been created yet."}
+                      </Typography>
+                    </TableCell>
+                  </TableRow>
+                ) : null}
+
+                {!isLoading
+                  ? rows.map((client) => (
+                      <TableRow hover key={client.id}>
+                        <TableCell>
+                          <Stack spacing={0.5}>
+                            <Typography fontWeight={600} variant="body2">
+                              {client.name}
+                            </Typography>
+                            <Typography color="text.secondary" variant="caption">
+                              {renderNullable(client.address)}
+                            </Typography>
+                          </Stack>
+                        </TableCell>
+                        <TableCell>{renderNullable(client.pib)}</TableCell>
+                        <TableCell>{renderNullable(client.mb)}</TableCell>
+                        <TableCell>{renderNullable(client.email)}</TableCell>
+                        <TableCell>{renderNullable(client.phone)}</TableCell>
+                        <TableCell>{formatLocation(client) || "—"}</TableCell>
+                        <TableCell>
+                          <Chip
+                            color={client.status === "ACTIVE" ? "success" : "default"}
+                            label={client.status === "ACTIVE" ? "Active" : "Inactive"}
+                            size="small"
+                            variant={client.status === "ACTIVE" ? "filled" : "outlined"}
+                          />
+                        </TableCell>
+                        <TableCell align="right">
+                          {isCompanyAdmin ? (
+                            <Button
+                              onClick={() => handleEdit(client)}
+                              size="small"
+                              startIcon={<EditRoundedIcon />}
+                              variant="text"
+                            >
+                              Edit
+                            </Button>
+                          ) : (
+                            <Typography color="text.secondary" variant="body2">
+                              View only
+                            </Typography>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  : null}
+
+                {!isLoading && emptyRowsCount > 0
+                  ? Array.from({ length: emptyRowsCount }).map((_, index) => (
+                      <TableRow key={`empty-${index}`} sx={{ height: table.dense ? 52 : 66 }}>
+                        <TableCell colSpan={headCells.length} />
+                      </TableRow>
+                    ))
+                  : null}
+              </TableBody>
+            </Table>
+          </TableContainer>
+
+          <TablePagination
+            component="div"
+            count={totalElements}
+            onPageChange={(_event, newPage) => table.onChangePage(newPage)}
+            onRowsPerPageChange={table.onChangeRowsPerPage}
+            page={table.page}
+            rowsPerPage={table.rowsPerPage}
+            rowsPerPageOptions={[10, 20, 50]}
+          />
+        </Stack>
+      </Paper>
 
       <ClientFormDialog
         client={selectedClient}
@@ -294,6 +352,6 @@ export function ClientsScreen({ user }: ClientsScreenProps) {
         onSaved={handleRefresh}
         open={isDialogOpen}
       />
-    </div>
+    </Stack>
   );
 }

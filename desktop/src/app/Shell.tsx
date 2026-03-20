@@ -1,4 +1,17 @@
 import type { PropsWithChildren } from "react";
+import {
+  AppBar,
+  Box,
+  Button,
+  Drawer,
+  List,
+  ListItemButton,
+  ListItemText,
+  Paper,
+  Stack,
+  Toolbar,
+  Typography
+} from "@mui/material";
 
 export type AppView =
   | "dashboard"
@@ -28,6 +41,8 @@ const navigationItems: Array<{ id: AppView; label: string }> = [
   { id: "settings", label: "Settings" }
 ];
 
+const drawerWidth = 280;
+
 export function Shell({
   companyName,
   userName,
@@ -42,54 +57,85 @@ export function Shell({
     activeView === "settings" ? "Company, profile, and appearance controls." : null;
 
   return (
-    <div className="app-shell">
-      <aside className="app-sidebar">
-        <div className="brand-block">
-          <span className="brand-kicker">Ares</span>
-          <h1>Ares Desktop</h1>
-        </div>
+    <Box sx={{ display: "flex", minHeight: "100vh" }}>
+      <Drawer
+        slotProps={{
+          paper: {
+            sx: {
+              width: drawerWidth,
+              boxSizing: "border-box",
+              borderRight: "1px solid",
+              borderColor: "divider",
+              px: 2,
+              py: 3
+            }
+          }
+        }}
+        sx={{ width: drawerWidth, flexShrink: 0 }}
+        variant="permanent"
+      >
+        <Stack spacing={3}>
+          <Box>
+            <Typography color="primary.main" sx={{ letterSpacing: "0.14em", textTransform: "uppercase" }} variant="overline">
+              Ares
+            </Typography>
+            <Typography variant="h4">Ares Desktop</Typography>
+          </Box>
 
-        <nav className="app-nav">
-          {navigationItems.map((item) => (
-            <button
-              key={item.id}
-              className={`nav-item${item.id === activeView ? " active" : ""}`}
-              onClick={() => onNavigate(item.id)}
-              type="button"
-            >
-              {item.label}
-            </button>
-          ))}
-        </nav>
-      </aside>
+          <List disablePadding sx={{ display: "grid", gap: 1 }}>
+            {navigationItems.map((item) => (
+              <ListItemButton
+                key={item.id}
+                onClick={() => onNavigate(item.id)}
+                selected={item.id === activeView}
+                sx={{ borderRadius: 2 }}
+              >
+                <ListItemText primary={item.label} />
+              </ListItemButton>
+            ))}
+          </List>
+        </Stack>
+      </Drawer>
 
-      <main className="app-main">
-        <header className="app-header">
-          <div className="header-copy">
-            <span className="eyebrow">{activeLabel}</span>
-            <h2>{companyName}</h2>
-            {headerDescription ? <p>{headerDescription}</p> : null}
-          </div>
+      <Box sx={{ display: "flex", flexDirection: "column", flexGrow: 1, minWidth: 0 }}>
+        <AppBar color="transparent" elevation={0} position="static" sx={{ borderBottom: "1px solid", borderColor: "divider", backdropFilter: "blur(8px)" }}>
+          <Toolbar sx={{ alignItems: "flex-start", gap: 3, justifyContent: "space-between", py: 2 }}>
+            <Box>
+              <Typography color="primary.main" sx={{ letterSpacing: "0.14em", textTransform: "uppercase" }} variant="overline">
+                {activeLabel}
+              </Typography>
+              <Typography variant="h4">{companyName}</Typography>
+              {headerDescription ? (
+                <Typography color="text.secondary" sx={{ mt: 1 }} variant="body2">
+                  {headerDescription}
+                </Typography>
+              ) : null}
+            </Box>
 
-          <div className="account-panel">
-            <div className="account-copy">
-              <span className="eyebrow">Signed In</span>
-              <strong>{userName}</strong>
-              <small>{userEmail}</small>
-            </div>
+            <Paper elevation={0} sx={{ p: 2, minWidth: 280 }}>
+              <Stack alignItems="flex-start" direction="row" justifyContent="space-between" spacing={2}>
+                <Box>
+                  <Typography color="primary.main" sx={{ letterSpacing: "0.14em", textTransform: "uppercase" }} variant="overline">
+                    Signed In
+                  </Typography>
+                  <Typography variant="subtitle1">{userName}</Typography>
+                  <Typography color="text.secondary" variant="body2">
+                    {userEmail}
+                  </Typography>
+                </Box>
 
-            <button
-              className="secondary-button"
-              onClick={() => void onLogout()}
-              type="button"
-            >
-              Logout
-            </button>
-          </div>
-        </header>
+                <Button onClick={() => void onLogout()} variant="outlined">
+                  Logout
+                </Button>
+              </Stack>
+            </Paper>
+          </Toolbar>
+        </AppBar>
 
-        <section className="app-content">{children}</section>
-      </main>
-    </div>
+        <Box component="main" sx={{ flexGrow: 1, p: 3 }}>
+          {children}
+        </Box>
+      </Box>
+    </Box>
   );
 }

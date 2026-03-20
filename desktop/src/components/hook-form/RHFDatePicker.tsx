@@ -1,3 +1,4 @@
+import { TextField } from "@mui/material";
 import { Controller, useFormContext } from "react-hook-form";
 
 type RHFDatePickerProps = {
@@ -29,24 +30,23 @@ export default function RHFDatePicker({
         const resolvedHelperText = error ? error.message : (helperText ?? "\u00A0");
 
         return (
-          <label className={`field rhf-field${className ? ` ${className}` : ""}`}>
-            <span>{label}</span>
-
-            <input
-              disabled={disabled}
-              max={max}
-              min={min}
-              onBlur={field.onBlur}
-              onChange={(event) => field.onChange(event.target.value)}
-              ref={field.ref}
-              type="date"
-              value={(field.value as string) ?? ""}
-            />
-
-            <small className={`rhf-helper-text${error ? " error" : ""}`}>
-              {resolvedHelperText}
-            </small>
-          </label>
+          <TextField
+            className={className}
+            disabled={disabled}
+            error={Boolean(error)}
+            fullWidth
+            helperText={resolvedHelperText}
+            inputRef={field.ref}
+            label={label}
+            onBlur={field.onBlur}
+            onChange={(event) => field.onChange(event.target.value)}
+            slotProps={{
+              inputLabel: { shrink: true },
+              htmlInput: { min, max }
+            }}
+            type="date"
+            value={(field.value as string) ?? ""}
+          />
         );
       }}
     />

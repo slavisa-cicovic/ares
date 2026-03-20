@@ -1,4 +1,10 @@
 import type { ReactNode } from "react";
+import {
+  FormControl,
+  FormHelperText,
+  InputLabel,
+  Select
+} from "@mui/material";
 import { Controller, useFormContext } from "react-hook-form";
 
 type RHFSelectProps = {
@@ -28,26 +34,23 @@ export default function RHFSelect({
       name={name}
       render={({ field, fieldState: { error } }) => {
         const resolvedHelperText = error ? error.message : (helperText ?? "\u00A0");
+        const labelId = `${name}-label`;
 
         return (
-          <label className={`field rhf-field${className ? ` ${className}` : ""}`}>
-            {label ? <span>{label}</span> : null}
-
-            <select
+          <FormControl className={className} error={Boolean(error)} fullWidth required={required}>
+            {label ? <InputLabel id={labelId}>{label}</InputLabel> : null}
+            <Select
               disabled={disabled}
+              label={label}
+              labelId={label ? labelId : undefined}
               onBlur={field.onBlur}
               onChange={(event) => field.onChange(event.target.value)}
-              ref={field.ref}
-              required={required}
               value={field.value ?? ""}
             >
               {children}
-            </select>
-
-            <small className={`rhf-helper-text${error ? " error" : ""}`}>
-              {resolvedHelperText}
-            </small>
-          </label>
+            </Select>
+            <FormHelperText>{resolvedHelperText}</FormHelperText>
+          </FormControl>
         );
       }}
     />

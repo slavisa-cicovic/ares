@@ -1,4 +1,14 @@
-import { useEffect, type PropsWithChildren, type ReactNode } from "react";
+import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
+import {
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  IconButton,
+  Stack,
+  Typography
+} from "@mui/material";
+import type { PropsWithChildren, ReactNode } from "react";
 
 type CustomDialogProps = PropsWithChildren<{
   open: boolean;
@@ -22,79 +32,48 @@ export default function CustomDialog({
   onClose,
   children
 }: CustomDialogProps) {
-  useEffect(() => {
-    if (!open || !closeOnEscape) {
-      return;
-    }
-
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        onClose();
-      }
-    }
-
-    window.addEventListener("keydown", handleKeyDown);
-
-    return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [closeOnEscape, onClose, open]);
-
-  useEffect(() => {
-    if (!open) {
-      return;
-    }
-
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-
-    return () => {
-      document.body.style.overflow = previousOverflow;
-    };
-  }, [open]);
-
-  if (!open) {
-    return null;
-  }
-
   return (
-    <div
-      className="custom-dialog-backdrop"
-      onClick={() => {
-        if (closeOnBackdrop) {
-          onClose();
+    <Dialog
+      fullWidth
+      maxWidth={size === "sm" ? "sm" : size === "lg" ? "lg" : "md"}
+      onClose={(_event, reason) => {
+        if (reason === "backdropClick" && !closeOnBackdrop) {
+          return;
         }
+
+        if (reason === "escapeKeyDown" && !closeOnEscape) {
+          return;
+        }
+
+        onClose();
       }}
-      role="presentation"
+      open={open}
     >
-      <div
-        aria-labelledby="custom-dialog-title"
-        aria-modal="true"
-        className={`custom-dialog custom-dialog-${size}`}
-        onClick={(event) => event.stopPropagation()}
-        role="dialog"
-      >
-        <div className="custom-dialog-header">
-          <div className="custom-dialog-copy">
-            <span className="eyebrow">Dialog</span>
-            <h3 id="custom-dialog-title">{title}</h3>
-            {description ? <p>{description}</p> : null}
-          </div>
+      <DialogTitle sx={{ pb: description ? 1 : 2 }}>
+        <Stack alignItems="flex-start" direction="row" justifyContent="space-between" spacing={2}>
+          <BoxWithText title={title} description={description} />
+          <IconButton aria-label="Close dialog" onClick={onClose}>
+            <CloseRoundedIcon />
+          </IconButton>
+        </Stack>
+      </DialogTitle>
 
-          <button
-            aria-label="Close dialog"
-            className="custom-dialog-close"
-            onClick={onClose}
-            type="button"
-          >
-            ×
-          </button>
-        </div>
+      <DialogContent dividers>{children}</DialogContent>
 
-        <div className="custom-dialog-content">{children}</div>
+      {actions ? <DialogActions sx={{ px: 3, py: 2 }}>{actions}</DialogActions> : null}
+    </Dialog>
+  );
+}
 
-        {actions ? <div className="custom-dialog-actions">{actions}</div> : null}
-      </div>
-    </div>
+function BoxWithText({ title, description }: { title: string; description?: string }) {
+  return (
+    <Stack spacing={0.5}>
+      <Typography variant="h5">{title}</Typography>
+      {description ? (
+        <Typography color="text.secondary" variant="body2">
+          {description}
+        </Typography>
+      ) : null}
+    </Stack>
   );
 }

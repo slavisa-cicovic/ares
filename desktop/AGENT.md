@@ -98,11 +98,17 @@ Within each feature, prefer clear separation between:
 - feature-specific state
 
 ## UI Rules
+- `desktop` uses `MUI` as its standard component library
 - desktop UI should preserve the practical strengths of the old app, not its technical constraints
 - prioritize fast business workflows over decorative complexity
 - forms should be explicit and validation feedback clear
 - tables, filters, and detail views should map closely to backend contracts
 - UI labels and messages should stay consistent with business terminology
+
+Preferred direction:
+- use `MUI` primitives first
+- keep custom desktop wrappers thin and purposeful
+- do not grow a parallel long-term custom component system for things `MUI` already solves well
 
 ## Electron Rules
 - Electron-specific code must stay isolated from feature/UI code

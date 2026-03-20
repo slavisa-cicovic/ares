@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, type ChangeEvent } from "react";
+import { Alert, Box, Button, Paper, Stack, Typography } from "@mui/material";
 import { useFormContext } from "react-hook-form";
 
 type RHFLogoPickerProps = {
@@ -72,59 +73,60 @@ export default function RHFLogoPicker({
   }
 
   return (
-    <div className={`rhf-logo-picker${className ? ` ${className}` : ""}`}>
-      {logoError ? <div className="error-banner inline-banner">{logoError}</div> : null}
+    <Stack className={className} spacing={2}>
+      {logoError ? <Alert severity="error">{logoError}</Alert> : null}
 
-      <div className="settings-upload-placeholder">
-        <div>
-          <strong>{title ?? "Company Logo"}</strong>
-          <p>
-            {description ??
-              "Select an image file to use later in branding, PDF templates, and exports."}
-          </p>
-        </div>
+      <Paper sx={{ borderRadius: 3, p: 2.5 }} variant="outlined">
+        <Stack spacing={2}>
+          <Box>
+            <Typography variant="subtitle1">{title ?? "Company Logo"}</Typography>
+            <Typography color="text.secondary" variant="body2">
+              {description ??
+                "Select an image file to use later in branding, PDF templates, and exports."}
+            </Typography>
+          </Box>
 
-        <div className="rhf-logo-picker-layout">
-          <div className="rhf-logo-preview">
-            {previewSource ? (
-              <img alt="Selected logo preview" src={previewSource} />
-            ) : (
-              <span>No logo selected.</span>
-            )}
-          </div>
+          <div className="rhf-logo-picker-layout">
+            <div className="rhf-logo-preview">
+              {previewSource ? (
+                <img alt="Selected logo preview" src={previewSource} />
+              ) : (
+                <span>No logo selected.</span>
+              )}
+            </div>
 
-          <div className="rhf-logo-actions">
-            <span className="muted-note">
-              {logoValue instanceof File
-                ? logoValue.name
-                : typeof logoValue === "string" && logoValue
-                  ? logoValue
-                  : "Choose a PNG, JPG, WEBP, or SVG image."}
-            </span>
+            <div className="rhf-logo-actions">
+              <Typography color="text.secondary" variant="body2">
+                {logoValue instanceof File
+                  ? logoValue.name
+                  : typeof logoValue === "string" && logoValue
+                    ? logoValue
+                    : "Choose a PNG, JPG, WEBP, or SVG image."}
+              </Typography>
 
-            <div className="settings-actions">
-              <label className="secondary-button rhf-file-button">
-                <input
-                  accept="image/*"
-                  disabled={disabled}
-                  onChange={handleFileChange}
-                  type="file"
-                />
-                Select
-              </label>
+              <Stack direction="row" spacing={2}>
+                <Button component="label" disabled={disabled} variant="outlined">
+                  Select
+                  <input
+                    accept="image/*"
+                    hidden
+                    onChange={handleFileChange}
+                    type="file"
+                  />
+                </Button>
 
-              <button
-                className="secondary-button"
-                disabled={disabled || !logoValue}
-                onClick={handleRemoveLogo}
-                type="button"
-              >
-                Remove
-              </button>
+                <Button
+                  disabled={disabled || !logoValue}
+                  onClick={handleRemoveLogo}
+                  variant="text"
+                >
+                  Remove
+                </Button>
+              </Stack>
             </div>
           </div>
-        </div>
-      </div>
-    </div>
+        </Stack>
+      </Paper>
+    </Stack>
   );
 }

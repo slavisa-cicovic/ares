@@ -1,3 +1,4 @@
+import { InputAdornment, TextField } from "@mui/material";
 import { Controller, useFormContext } from "react-hook-form";
 
 type RHFNumberFieldProps = {
@@ -58,32 +59,30 @@ export default function RHFNumberField({
         const resolvedHelperText = error ? error.message : (helperText ?? "\u00A0");
 
         return (
-          <label className={`field rhf-field${className ? ` ${className}` : ""}`}>
-            {label ? <span>{label}</span> : null}
-
-            <div className={`rhf-input-with-suffix${suffix ? " has-suffix" : ""}`}>
-              <input
-                disabled={disabled}
-                inputMode="numeric"
-                onBlur={field.onBlur}
-                onChange={(event) => {
-                  const nextDigits = event.target.value.replace(/\D/g, "");
-                  field.onChange(formatDigits(nextDigits, decimals));
-                }}
-                placeholder={placeholder}
-                ref={field.ref}
-                required={required}
-                type="text"
-                value={normalizedValue}
-              />
-
-              {suffix ? <span className="rhf-input-suffix">{suffix}</span> : null}
-            </div>
-
-            <small className={`rhf-helper-text${error ? " error" : ""}`}>
-              {resolvedHelperText}
-            </small>
-          </label>
+          <TextField
+            className={className}
+            disabled={disabled}
+            error={Boolean(error)}
+            fullWidth
+            helperText={resolvedHelperText}
+            inputRef={field.ref}
+            label={label}
+            onBlur={field.onBlur}
+            onChange={(event) => {
+              const nextDigits = event.target.value.replace(/\D/g, "");
+              field.onChange(formatDigits(nextDigits, decimals));
+            }}
+            placeholder={placeholder}
+            required={required}
+            slotProps={{
+              htmlInput: { inputMode: "numeric" },
+              input: {
+                endAdornment: suffix ? <InputAdornment position="end">{suffix}</InputAdornment> : undefined
+              }
+            }}
+            sx={{ "& input": { textAlign: "right" } }}
+            value={normalizedValue}
+          />
         );
       }}
     />

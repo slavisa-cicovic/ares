@@ -1,4 +1,5 @@
 import type { HTMLInputTypeAttribute } from "react";
+import { TextField } from "@mui/material";
 import { Controller, useFormContext } from "react-hook-form";
 
 type RHFTextFieldProps = {
@@ -39,39 +40,25 @@ export default function RHFTextField({
         const resolvedHelperText = error ? error.message : (helperText ?? "\u00A0");
 
         return (
-          <label className={`field rhf-field${className ? ` ${className}` : ""}`}>
-            {label ? <span>{label}</span> : null}
-
-            {multiline ? (
-              <textarea
-                disabled={disabled}
-                maxLength={maxLength}
-                onBlur={field.onBlur}
-                onChange={(event) => field.onChange(event.target.value)}
-                placeholder={placeholder}
-                ref={field.ref}
-                required={required}
-                rows={rows}
-                value={normalizedValue}
-              />
-            ) : (
-              <input
-                disabled={disabled}
-                maxLength={maxLength}
-                onBlur={field.onBlur}
-                onChange={(event) => field.onChange(event.target.value)}
-                placeholder={placeholder}
-                ref={field.ref}
-                required={required}
-                type={type}
-                value={normalizedValue}
-              />
-            )}
-
-            <small className={`rhf-helper-text${error ? " error" : ""}`}>
-              {resolvedHelperText}
-            </small>
-          </label>
+          <TextField
+            className={className}
+            disabled={disabled}
+            error={Boolean(error)}
+            fullWidth
+            helperText={resolvedHelperText}
+            inputRef={field.ref}
+            label={label}
+            multiline={multiline}
+            onBlur={field.onBlur}
+            onChange={(event) => field.onChange(event.target.value)}
+            placeholder={placeholder}
+            required={required}
+            rows={multiline ? rows : undefined}
+            slotProps={{ htmlInput: { maxLength } }}
+            type={type}
+            value={normalizedValue}
+            variant="outlined"
+          />
         );
       }}
     />

@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { Alert, Button } from "@mui/material";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { CustomDialog, FormProvider, RHFSwitch, RHFTextField } from "../../components";
@@ -111,17 +112,16 @@ export function ClientFormDialog({ open, client, onClose, onSaved }: ClientFormD
     <CustomDialog
       actions={
         <>
-          <button className="secondary-button" onClick={onClose} type="button">
+          <Button onClick={onClose} variant="text">
             Cancel
-          </button>
-          <button
-            className="primary-button"
+          </Button>
+          <Button
             disabled={isSubmitting}
             onClick={() => void submitForm()}
-            type="button"
+            variant="contained"
           >
             {isSubmitting ? "Saving..." : client ? "Save" : "Create"}
-          </button>
+          </Button>
         </>
       }
       onClose={onClose}
@@ -152,7 +152,7 @@ export function ClientFormDialog({ open, client, onClose, onSaved }: ClientFormD
         </div>
 
         {errors.root?.message ? (
-          <div className="error-banner inline-banner">{errors.root.message}</div>
+          <Alert severity="error">{errors.root.message}</Alert>
         ) : null}
       </FormProvider>
     </CustomDialog>

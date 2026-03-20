@@ -23,7 +23,7 @@ export type TableState = {
   onResetPage: VoidFunction;
   onSort: (id: string) => void;
   onChangePage: (newPage: number) => void;
-  onChangeRowsPerPage: (event: ChangeEvent<HTMLSelectElement>) => void;
+  onChangeRowsPerPage: (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
   onChangeDense: (event: ChangeEvent<HTMLInputElement>) => void;
   onUpdatePageDeleteRow: (totalRowsInPage: number) => void;
   onUpdatePageDeleteRows: (args: {
