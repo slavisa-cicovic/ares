@@ -11,6 +11,8 @@ import org.springframework.data.jpa.repository.Query;
 
 public interface ClientRepository extends JpaRepository<Client, UUID> {
 
+    Optional<Client> findByCompanyIdAndNameAndDeletedAtIsNull(UUID companyId, String name);
+
     Optional<Client> findByIdAndCompanyIdAndDeletedAtIsNull(UUID id, UUID companyId);
 
     @Query("""
