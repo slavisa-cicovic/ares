@@ -176,7 +176,7 @@ export function ClientsScreen({ user }: ClientsScreenProps) {
         <Typography variant="h4">Client directory</Typography>
       </Box>
 
-      <Paper sx={{ borderRadius: 3, p: 3 }} variant="outlined">
+      <Paper sx={{ borderRadius: 1, p: 3 }} variant="outlined">
         <Stack spacing={3}>
           <Stack
             alignItems={{ md: "flex-end" }}
@@ -226,7 +226,7 @@ export function ClientsScreen({ user }: ClientsScreenProps) {
             {totalElements} {totalElements === 1 ? "client" : "clients"} in this company
           </Typography>
 
-          <TableContainer sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2 }}>
+          <TableContainer sx={{ border: "1px solid", borderColor: "divider", borderRadius: 1 }}>
             <Table>
               <TableHead>
                 <TableRow>
