@@ -21,6 +21,7 @@ yarn-error.log*
 # Node / desktop / mobile
 node_modules/
 dist/
+dist-electron/
 build/
 coverage/
 .expo/

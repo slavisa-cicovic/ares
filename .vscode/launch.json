@@ -16,6 +16,13 @@
         "ARES_DB_USERNAME": "ares",
         "ARES_DB_PASSWORD": "change_me_local"
       }
+    },
+    {
+      "type": "node-terminal",
+      "name": "Ares Desktop",
+      "request": "launch",
+      "command": "npm run dev",
+      "cwd": "${workspaceFolder}/desktop"
     }
   ]
 }

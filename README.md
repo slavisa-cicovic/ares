@@ -56,3 +56,29 @@ Seeded accounts:
 - `user.one@local.ares` as `user`
 - `admin.two@local.ares` as `company-admin`
 - `user.two@local.ares` as `user`
+
+## Desktop Development
+
+The desktop app lives in `desktop` and is bootstrapped as Electron + React + TypeScript.
+
+1. Create a local desktop env file:
+
+```bash
+cd desktop
+cp .env.example .env
+```
+
+2. Install desktop dependencies:
+
+```bash
+npm install
+```
+
+3. Start the desktop dev app:
+
+```bash
+npm run dev
+```
+
+The desktop app expects the backend to be available at `VITE_API_BASE_URL`.
+The default development value is `http://localhost:8080`.
