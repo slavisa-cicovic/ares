@@ -24,7 +24,7 @@ import {
   TextField,
   Typography
 } from "@mui/material";
-import { ConfirmDialog, FiltersResult, type FilterItem } from "../../components";
+import { ConfirmDialog, DateRangeFilter, FiltersResult, type FilterItem } from "../../components";
 import { emptyRows, useTable } from "../../components/table";
 import { ApiClientError } from "../../lib/api/DesktopApiClient";
 import type {
@@ -344,26 +344,17 @@ export function InvoicesScreen() {
                 </Select>
               </FormControl>
 
-              <TextField
-                InputLabelProps={{ shrink: true }}
-                label="From"
-                onChange={(event) => {
-                  setFrom(event.target.value);
+              <DateRangeFilter
+                from={from}
+                onFromChange={(value) => {
+                  setFrom(value);
                   table.onResetPage();
                 }}
-                type="date"
-                value={from}
-              />
-
-              <TextField
-                InputLabelProps={{ shrink: true }}
-                label="To"
-                onChange={(event) => {
-                  setTo(event.target.value);
+                onToChange={(value) => {
+                  setTo(value);
                   table.onResetPage();
                 }}
-                type="date"
-                value={to}
+                to={to}
               />
             </Stack>
 

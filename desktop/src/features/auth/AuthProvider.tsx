@@ -21,7 +21,9 @@ import type {
   ListClientsParams,
   ListInvoicesParams,
   ListItemsParams,
+  ListPaymentsParams,
   PaymentRecord,
+  PaymentSummary,
   RefundRecord,
   PagedResponse,
   ReportsSummary,
@@ -52,6 +54,7 @@ type AuthContextValue = {
   updateItem: (itemId: string, payload: UpsertItemPayload) => Promise<ItemSummary>;
   deleteItem: (itemId: string) => Promise<void>;
   getInvoices: (params: ListInvoicesParams) => Promise<PagedResponse<InvoiceSummary>>;
+  getPayments: (params: ListPaymentsParams) => Promise<PagedResponse<PaymentSummary>>;
   getInvoice: (invoiceId: string) => Promise<InvoiceDetail>;
   createInvoice: (payload: UpsertInvoicePayload) => Promise<InvoiceDetail>;
   updateInvoice: (invoiceId: string, payload: UpsertInvoicePayload) => Promise<InvoiceDetail>;
@@ -189,6 +192,9 @@ export function AuthProvider({ children }: PropsWithChildren) {
     },
     getInvoices: async (params) => {
       return client.listInvoices(params);
+    },
+    getPayments: async (params) => {
+      return client.listPayments(params);
     },
     getInvoice: async (invoiceId) => {
       return client.getInvoice(invoiceId);

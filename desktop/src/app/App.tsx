@@ -7,6 +7,7 @@ import { SettingsScreen } from "../features/settings/SettingsScreen";
 import { ClientsScreen } from "../features/clients/ClientsScreen";
 import { ItemsScreen } from "../features/items/ItemsScreen";
 import { InvoicesScreen } from "../features/invoices/InvoicesScreen";
+import { PaymentsScreen } from "../features/payments/PaymentsScreen";
 import { PlaceholderScreen } from "../features/navigation/PlaceholderScreen";
 import { normalizeDesktopTheme } from "../features/settings/themeStorage";
 import { Shell, type AppView } from "./Shell";
@@ -44,12 +45,7 @@ function AppContent() {
         {activeView === "clients" ? <ClientsScreen user={state.user} /> : null}
         {activeView === "items" ? <ItemsScreen user={state.user} /> : null}
         {activeView === "invoices" ? <InvoicesScreen /> : null}
-        {activeView === "payments" ? (
-          <PlaceholderScreen
-            description="Payment registration and invoice collection views will live here."
-            title="Payments"
-          />
-        ) : null}
+        {activeView === "payments" ? <PaymentsScreen /> : null}
         {activeView === "reports" ? (
           <PlaceholderScreen
             description="Reporting screens beyond the dashboard summary will live here."

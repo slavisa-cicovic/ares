@@ -37,13 +37,6 @@ export type InvoiceSummary = {
   remainingRefundAmount: number;
 };
 
-export type PaymentRecord = {
-  id: string;
-  paymentDate: string;
-  amount: number;
-  note: string | null;
-};
-
 export type RefundRecord = {
   id: string;
   refundDate: string;
@@ -122,12 +115,6 @@ export type UpsertInvoicePayload = {
   currency: string;
   note: string | null;
   lines: UpsertInvoiceLinePayload[];
-};
-
-export type CreatePaymentPayload = {
-  paymentDate: string;
-  amount: number;
-  note: string | null;
 };
 
 export type CreateRefundPayload = {

@@ -333,6 +333,97 @@ class PaymentModuleIntegrationTests {
     }
 
     @Test
+    void paymentsListShouldReturnTenantScopedPagedResults() throws Exception {
+        String tokenOne = login("admin.one@local.ares", "ares-test").get("accessToken").asText();
+        String tokenTwo = login("admin.two@local.ares", "ares-test").get("accessToken").asText();
+        JsonNode invoiceOne = createAndIssueInvoice(tokenOne, companyOneClient.getId(), companyOneItem.getId());
+        JsonNode invoiceTwo = createAndIssueInvoice(tokenTwo, companyTwoClient.getId(), companyTwoItem.getId());
+
+        mockMvc.perform(
+                post("/invoices/{invoiceId}/payments", invoiceOne.get("id").asText())
+                    .header("Authorization", bearer(tokenOne))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(paymentPayload("2026-03-21", "100.00", "Alpha payment"))
+            )
+            .andExpect(status().isCreated());
+
+        mockMvc.perform(
+                post("/invoices/{invoiceId}/payments", invoiceTwo.get("id").asText())
+                    .header("Authorization", bearer(tokenTwo))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(paymentPayload("2026-03-22", "80.00", "Beta payment"))
+            )
+            .andExpect(status().isCreated());
+
+        mockMvc.perform(
+                get("/payments")
+                    .header("Authorization", bearer(tokenOne))
+            )
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.items.length()").value(1))
+            .andExpect(jsonPath("$.items[0].invoiceId").value(invoiceOne.get("id").asText()))
+            .andExpect(jsonPath("$.items[0].invoiceNumber").value(invoiceOne.get("invoiceNumber").asText()))
+            .andExpect(jsonPath("$.items[0].clientName").value("Acme Client"))
+            .andExpect(jsonPath("$.items[0].currency").value("RSD"));
+    }
+
+    @Test
+    void paymentsListShouldSupportSearchAndDateRange() throws Exception {
+        String token = login("admin.one@local.ares", "ares-test").get("accessToken").asText();
+        JsonNode invoiceOne = createAndIssueInvoice(token, companyOneClient.getId(), companyOneItem.getId());
+        JsonNode invoiceTwo = createAndIssueInvoice(token, companyOneClient.getId(), companyOneItem.getId());
+
+        mockMvc.perform(
+                post("/invoices/{invoiceId}/payments", invoiceOne.get("id").asText())
+                    .header("Authorization", bearer(token))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(paymentPayload("2026-03-20", "100.00", "Advance"))
+            )
+            .andExpect(status().isCreated());
+
+        mockMvc.perform(
+                post("/invoices/{invoiceId}/payments", invoiceTwo.get("id").asText())
+                    .header("Authorization", bearer(token))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(paymentPayload("2026-03-25", "120.00", "Closing payment"))
+            )
+            .andExpect(status().isCreated());
+
+        mockMvc.perform(
+                get("/payments")
+                    .header("Authorization", bearer(token))
+                    .param("search", "Closing")
+            )
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.items.length()").value(1))
+            .andExpect(jsonPath("$.items[0].invoiceId").value(invoiceTwo.get("id").asText()));
+
+        mockMvc.perform(
+                get("/payments")
+                    .header("Authorization", bearer(token))
+                    .param("from", "2026-03-24")
+                    .param("to", "2026-03-26")
+            )
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.items.length()").value(1))
+            .andExpect(jsonPath("$.items[0].paymentDate").value("2026-03-25"));
+    }
+
+    @Test
+    void paymentsListShouldRejectInvalidDateRange() throws Exception {
+        String token = login("admin.one@local.ares", "ares-test").get("accessToken").asText();
+
+        mockMvc.perform(
+                get("/payments")
+                    .header("Authorization", bearer(token))
+                    .param("from", "2026-03-26")
+                    .param("to", "2026-03-24")
+            )
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.message").value("Invalid payment date range."));
+    }
+
+    @Test
     void crossTenantPaymentAccessShouldReturnNotFound() throws Exception {
         String tokenOne = login("admin.one@local.ares", "ares-test").get("accessToken").asText();
         String tokenTwo = login("admin.two@local.ares", "ares-test").get("accessToken").asText();

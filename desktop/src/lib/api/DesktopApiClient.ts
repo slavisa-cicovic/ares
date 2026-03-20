@@ -12,7 +12,9 @@ import type {
   ListClientsParams,
   ListInvoicesParams,
   ListItemsParams,
+  ListPaymentsParams,
   PaymentRecord,
+  PaymentSummary,
   RefundRecord,
   PagedResponse,
   ReportsSummary,
@@ -253,6 +255,28 @@ export class DesktopApiClient {
 
   async listInvoicePayments(invoiceId: string): Promise<PaymentRecord[]> {
     return this.request<PaymentRecord[]>(`/invoices/${invoiceId}/payments`);
+  }
+
+  async listPayments(params: ListPaymentsParams): Promise<PagedResponse<PaymentSummary>> {
+    const query = new URLSearchParams({
+      page: String(params.page),
+      size: String(params.size),
+      sort: params.sort
+    });
+
+    if (params.search && params.search.trim()) {
+      query.set("search", params.search.trim());
+    }
+
+    if (params.from) {
+      query.set("from", params.from);
+    }
+
+    if (params.to) {
+      query.set("to", params.to);
+    }
+
+    return this.request<PagedResponse<PaymentSummary>>(`/payments?${query.toString()}`);
   }
 
   async createInvoicePayment(invoiceId: string, payload: CreatePaymentPayload): Promise<PaymentRecord> {

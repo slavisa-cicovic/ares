@@ -4,5 +4,6 @@ export * from "./company";
 export * from "./item";
 export * from "./invoice";
 export * from "./paged-response";
+export * from "./payment";
 export * from "./reports";
 export * from "./user";
