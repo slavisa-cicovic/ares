@@ -13,7 +13,7 @@ import {
   TableRow,
   Typography
 } from "@mui/material";
-import { CustomDialog } from "../../components";
+import { ConfirmDialog, CustomDialog } from "../../components";
 import { ApiClientError } from "../../lib/api/DesktopApiClient";
 import type { InvoiceDetail, PaymentRecord } from "../../lib/api/types";
 import { useAuth } from "../auth/AuthProvider";
@@ -24,7 +24,9 @@ type InvoiceDetailDialogProps = {
   open: boolean;
   onClose: () => void;
   canManagePayments: boolean;
+  canCreateCreditNote: boolean;
   onChanged: () => void;
+  onOpenInvoice: (invoiceId: string) => void;
 };
 
 function formatMoney(value: number, currency: string): string {
@@ -58,13 +60,23 @@ function paymentStatusColor(status: string): "default" | "warning" | "success" {
   return "default";
 }
 
-export function InvoiceDetailDialog({ invoiceId, open, onClose, canManagePayments, onChanged }: InvoiceDetailDialogProps) {
-  const { getInvoice, getInvoicePayments } = useAuth();
+export function InvoiceDetailDialog({
+  invoiceId,
+  open,
+  onClose,
+  canManagePayments,
+  canCreateCreditNote,
+  onChanged,
+  onOpenInvoice
+}: InvoiceDetailDialogProps) {
+  const { getInvoice, getInvoicePayments, createInvoiceCreditNote } = useAuth();
   const [invoice, setInvoice] = useState<InvoiceDetail | null>(null);
   const [payments, setPayments] = useState<PaymentRecord[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
+  const [isConfirmCreditNoteOpen, setIsConfirmCreditNoteOpen] = useState(false);
+  const [isCreatingCreditNote, setIsCreatingCreditNote] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
@@ -108,11 +120,28 @@ export function InvoiceDetailDialog({ invoiceId, open, onClose, canManagePayment
   return (
     <CustomDialog
       actions={
-        canManagePayments && invoice?.status === "ISSUED" && invoice.outstandingAmount > 0 ? (
-          <Button onClick={() => setIsPaymentDialogOpen(true)} variant="contained">
-            Add Payment
-          </Button>
-        ) : undefined
+        <Stack direction="row" spacing={1.5}>
+          {canCreateCreditNote &&
+          invoice?.status === "ISSUED" &&
+          invoice.documentType === "INVOICE" &&
+          !invoice.linkedCreditNoteId ? (
+            <Button
+              onClick={() => setIsConfirmCreditNoteOpen(true)}
+              variant="outlined"
+            >
+              Create Credit Note
+            </Button>
+          ) : null}
+
+          {canManagePayments &&
+          invoice?.status === "ISSUED" &&
+          invoice.documentType === "INVOICE" &&
+          invoice.outstandingAmount > 0 ? (
+            <Button onClick={() => setIsPaymentDialogOpen(true)} variant="contained">
+              Add Payment
+            </Button>
+          ) : null}
+        </Stack>
       }
       onClose={onClose}
       open={open}
@@ -135,10 +164,26 @@ export function InvoiceDetailDialog({ invoiceId, open, onClose, canManagePayment
               <Typography color="text.secondary" variant="body2">
                 Invoice No: {invoice.invoiceNumber}
               </Typography>
+              {invoice.documentType === "CREDIT_NOTE" && invoice.originalInvoiceNumber ? (
+                <Typography color="text.secondary" variant="body2">
+                  Credit note for {invoice.originalInvoiceNumber}
+                </Typography>
+              ) : null}
+              {invoice.documentType === "INVOICE" && invoice.linkedCreditNoteNumber ? (
+                <Typography color="text.secondary" variant="body2">
+                  Credit note: {invoice.linkedCreditNoteNumber}
+                </Typography>
+              ) : null}
             </Stack>
 
             <Stack direction="row" spacing={1}>
               <Chip color={statusColor(invoice.status)} label={invoice.status} size="small" />
+              <Chip
+                color={invoice.documentType === "CREDIT_NOTE" ? "default" : "primary"}
+                label={invoice.documentType === "CREDIT_NOTE" ? "CREDIT NOTE" : "INVOICE"}
+                size="small"
+                variant={invoice.documentType === "CREDIT_NOTE" ? "outlined" : "filled"}
+              />
               <Chip color={paymentStatusColor(invoice.paymentStatus)} label={invoice.paymentStatus} size="small" />
             </Stack>
           </Stack>
@@ -267,6 +312,40 @@ export function InvoiceDetailDialog({ invoiceId, open, onClose, canManagePayment
           onChanged();
         }}
         open={isPaymentDialogOpen}
+      />
+      <ConfirmDialog
+        confirmLabel={isCreatingCreditNote ? "Creating..." : "Create Credit Note"}
+        content="This will create a separate credit note linked to the current issued invoice. Continue?"
+        isLoading={isCreatingCreditNote}
+        onClose={() => {
+          if (!isCreatingCreditNote) {
+            setIsConfirmCreditNoteOpen(false);
+          }
+        }}
+        onConfirm={async () => {
+          if (!invoiceId) {
+            return;
+          }
+
+          try {
+            setIsCreatingCreditNote(true);
+            setError(null);
+            const creditNote = await createInvoiceCreditNote(invoiceId);
+            setIsConfirmCreditNoteOpen(false);
+            onChanged();
+            onOpenInvoice(creditNote.id);
+          } catch (requestError) {
+            setError(
+              requestError instanceof ApiClientError
+                ? requestError.message
+                : "Unable to create a credit note right now."
+            );
+          } finally {
+            setIsCreatingCreditNote(false);
+          }
+        }}
+        open={isConfirmCreditNoteOpen}
+        title="Create Credit Note"
       />
     </CustomDialog>
   );

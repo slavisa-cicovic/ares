@@ -94,7 +94,7 @@ function paymentStatusColor(status: InvoicePaymentStatus): "default" | "warning"
 }
 
 function canEditDraft(user: AuthenticatedUser, invoice: InvoiceSummary): boolean {
-  return user.roles.includes("company-admin") && invoice.status === "DRAFT";
+  return user.roles.includes("company-admin") && invoice.status === "DRAFT" && invoice.documentType === "INVOICE";
 }
 
 export function InvoicesScreen() {
@@ -319,6 +319,11 @@ export function InvoicesScreen() {
                               <Typography color="text.secondary" variant="caption">
                                 {invoice.clientName}
                               </Typography>
+                              {invoice.documentType === "CREDIT_NOTE" && invoice.originalInvoiceNumber ? (
+                                <Typography color="text.secondary" variant="caption">
+                                  Credit note for {invoice.originalInvoiceNumber}
+                                </Typography>
+                              ) : null}
                             </Stack>
                           </TableCell>
                           <TableCell>{invoice.clientName}</TableCell>
@@ -396,11 +401,13 @@ export function InvoicesScreen() {
 
       <InvoiceDetailDialog
         canManagePayments={isCompanyAdmin}
+        canCreateCreditNote={isCompanyAdmin}
         invoiceId={selectedInvoiceId}
         onChanged={() => {
           setReloadKey((current) => current + 1);
         }}
         onClose={() => setSelectedInvoiceId(null)}
+        onOpenInvoice={(invoiceId) => setSelectedInvoiceId(invoiceId)}
         open={Boolean(selectedInvoiceId)}
       />
       <InvoiceDraftDialog
