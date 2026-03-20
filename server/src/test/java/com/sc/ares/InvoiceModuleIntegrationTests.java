@@ -1,8 +1,10 @@
 package com.sc.ares;
 
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -256,6 +258,93 @@ class InvoiceModuleIntegrationTests {
                     .content(invoicePayload(companyOneClient.getId(), companyOneItem.getId(), "2026-03-21", "2026-03-30"))
             )
             .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void issuedInvoiceShouldReturnPdf() throws Exception {
+        String token = login("admin.one@local.ares", "ares-test").get("accessToken").asText();
+        JsonNode createdInvoice = createInvoice(token, companyOneClient.getId(), companyOneItem.getId());
+
+        mockMvc.perform(
+                post("/invoices/{invoiceId}/issue", createdInvoice.get("id").asText())
+                    .header("Authorization", bearer(token))
+            )
+            .andExpect(status().isOk());
+
+        MvcResult result = mockMvc.perform(
+                get("/invoices/{invoiceId}/pdf", createdInvoice.get("id").asText())
+                    .header("Authorization", bearer(token))
+            )
+            .andExpect(status().isOk())
+            .andExpect(header().string("Content-Type", MediaType.APPLICATION_PDF_VALUE))
+            .andExpect(header().string("Content-Disposition", org.hamcrest.Matchers.containsString(".pdf")))
+            .andReturn();
+
+        assertTrue(new String(result.getResponse().getContentAsByteArray(), 0, 4).startsWith("%PDF"));
+    }
+
+    @Test
+    void draftInvoiceShouldNotReturnPdf() throws Exception {
+        String token = login("admin.one@local.ares", "ares-test").get("accessToken").asText();
+        JsonNode createdInvoice = createInvoice(token, companyOneClient.getId(), companyOneItem.getId());
+
+        mockMvc.perform(
+                get("/invoices/{invoiceId}/pdf", createdInvoice.get("id").asText())
+                    .header("Authorization", bearer(token))
+            )
+            .andExpect(status().isConflict());
+    }
+
+    @Test
+    void crossTenantPdfShouldReturnNotFound() throws Exception {
+        String tokenOne = login("admin.one@local.ares", "ares-test").get("accessToken").asText();
+        String tokenTwo = login("admin.two@local.ares", "ares-test").get("accessToken").asText();
+        JsonNode createdInvoice = createInvoice(tokenTwo, companyTwoClient.getId(), companyTwoItem.getId());
+
+        mockMvc.perform(
+                post("/invoices/{invoiceId}/issue", createdInvoice.get("id").asText())
+                    .header("Authorization", bearer(tokenTwo))
+            )
+            .andExpect(status().isOk());
+
+        mockMvc.perform(
+                get("/invoices/{invoiceId}/pdf", createdInvoice.get("id").asText())
+                    .header("Authorization", bearer(tokenOne))
+            )
+            .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void creditNoteShouldReturnPdf() throws Exception {
+        String token = login("admin.one@local.ares", "ares-test").get("accessToken").asText();
+        JsonNode createdInvoice = createInvoice(token, companyOneClient.getId(), companyOneItem.getId());
+
+        mockMvc.perform(
+                post("/invoices/{invoiceId}/issue", createdInvoice.get("id").asText())
+                    .header("Authorization", bearer(token))
+            )
+            .andExpect(status().isOk());
+
+        JsonNode creditNote = objectMapper.readTree(
+            mockMvc.perform(
+                    post("/invoices/{invoiceId}/credit-note", createdInvoice.get("id").asText())
+                        .header("Authorization", bearer(token))
+                )
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString()
+        );
+
+        MvcResult result = mockMvc.perform(
+                get("/invoices/{invoiceId}/pdf", creditNote.get("id").asText())
+                    .header("Authorization", bearer(token))
+            )
+            .andExpect(status().isOk())
+            .andExpect(header().string("Content-Type", MediaType.APPLICATION_PDF_VALUE))
+            .andReturn();
+
+        assertTrue(new String(result.getResponse().getContentAsByteArray(), 0, 4).startsWith("%PDF"));
     }
 
     @Test

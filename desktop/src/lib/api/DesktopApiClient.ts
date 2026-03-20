@@ -265,6 +265,10 @@ export class DesktopApiClient {
     });
   }
 
+  async getInvoicePdf(invoiceId: string): Promise<ArrayBuffer> {
+    return this.requestBinary(`/invoices/${invoiceId}/pdf`);
+  }
+
   private async request<T>(path: string, init?: RequestInit, retry = true): Promise<T> {
     const session = this.getSession();
 
@@ -292,6 +296,52 @@ export class DesktopApiClient {
     }
 
     return this.parseResponse<T>(response);
+  }
+
+  private async requestBinary(path: string, init?: RequestInit, retry = true): Promise<ArrayBuffer> {
+    const session = this.getSession();
+
+    if (!session) {
+      throw new ApiClientError(401, "Session is missing.");
+    }
+
+    const response = await fetch(this.url(path), {
+      ...init,
+      headers: {
+        ...(init?.headers ?? {}),
+        Authorization: `Bearer ${session.accessToken}`
+      }
+    });
+
+    if (response.status === 401 && retry) {
+      const nextSession = await this.refreshSession();
+
+      if (!nextSession) {
+        throw new ApiClientError(401, "Session expired.");
+      }
+
+      return this.requestBinary(path, init, false);
+    }
+
+    if (!response.ok) {
+      const text = await response.text();
+      let message = "Request failed.";
+
+      if (text) {
+        try {
+          const data = JSON.parse(text) as ApiErrorPayload;
+          if (typeof data.message === "string") {
+            message = data.message;
+          }
+        } catch {
+          message = text;
+        }
+      }
+
+      throw new ApiClientError(response.status, message);
+    }
+
+    return response.arrayBuffer();
   }
 
   private async refreshSession(): Promise<SessionData | null> {

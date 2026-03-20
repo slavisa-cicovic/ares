@@ -4,10 +4,15 @@ import com.sc.ares.common.api.PagedResponse;
 import com.sc.ares.features.invoice.dto.InvoiceResponse;
 import com.sc.ares.features.invoice.dto.InvoiceSummaryResponse;
 import com.sc.ares.features.invoice.dto.UpsertInvoiceRequest;
+import com.sc.ares.features.invoice.service.InvoicePdfService;
 import com.sc.ares.features.invoice.service.InvoiceService;
 import jakarta.validation.Valid;
 import java.util.UUID;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -23,9 +28,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class InvoiceController {
 
     private final InvoiceService invoiceService;
+    private final InvoicePdfService invoicePdfService;
 
-    public InvoiceController(InvoiceService invoiceService) {
+    public InvoiceController(InvoiceService invoiceService, InvoicePdfService invoicePdfService) {
         this.invoiceService = invoiceService;
+        this.invoicePdfService = invoicePdfService;
     }
 
     @GetMapping
@@ -43,6 +50,17 @@ public class InvoiceController {
     @GetMapping("/{invoiceId}")
     public InvoiceResponse getInvoice(@PathVariable UUID invoiceId) {
         return invoiceService.getInvoice(invoiceId);
+    }
+
+    @GetMapping("/{invoiceId}/pdf")
+    public ResponseEntity<byte[]> getInvoicePdf(@PathVariable UUID invoiceId) {
+        String filename = invoicePdfService.getFilename(invoiceId);
+        byte[] pdf = invoicePdfService.generatePdf(invoiceId);
+
+        return ResponseEntity.ok()
+            .contentType(MediaType.APPLICATION_PDF)
+            .header(HttpHeaders.CONTENT_DISPOSITION, ContentDisposition.inline().filename(filename).build().toString())
+            .body(pdf);
     }
 
     @PostMapping

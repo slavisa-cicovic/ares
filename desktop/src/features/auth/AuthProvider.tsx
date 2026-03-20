@@ -57,6 +57,7 @@ type AuthContextValue = {
   updateInvoice: (invoiceId: string, payload: UpsertInvoicePayload) => Promise<InvoiceDetail>;
   issueInvoice: (invoiceId: string) => Promise<InvoiceDetail>;
   createInvoiceCreditNote: (invoiceId: string) => Promise<InvoiceDetail>;
+  getInvoicePdf: (invoiceId: string) => Promise<ArrayBuffer>;
   getInvoicePayments: (invoiceId: string) => Promise<PaymentRecord[]>;
   createInvoicePayment: (invoiceId: string, payload: CreatePaymentPayload) => Promise<PaymentRecord>;
   getInvoiceRefunds: (invoiceId: string) => Promise<RefundRecord[]>;
@@ -203,6 +204,9 @@ export function AuthProvider({ children }: PropsWithChildren) {
     },
     createInvoiceCreditNote: async (invoiceId) => {
       return client.createInvoiceCreditNote(invoiceId);
+    },
+    getInvoicePdf: async (invoiceId) => {
+      return client.getInvoicePdf(invoiceId);
     },
     getInvoicePayments: async (invoiceId) => {
       return client.listInvoicePayments(invoiceId);
