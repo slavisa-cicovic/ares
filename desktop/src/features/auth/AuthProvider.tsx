@@ -14,6 +14,7 @@ import type {
   ClientSummary,
   CompanyResponse,
   CreatePaymentPayload,
+  CreateRefundPayload,
   InvoiceDetail,
   InvoiceSummary,
   ItemSummary,
@@ -21,6 +22,7 @@ import type {
   ListInvoicesParams,
   ListItemsParams,
   PaymentRecord,
+  RefundRecord,
   PagedResponse,
   ReportsSummary,
   UpsertClientPayload,
@@ -57,6 +59,8 @@ type AuthContextValue = {
   createInvoiceCreditNote: (invoiceId: string) => Promise<InvoiceDetail>;
   getInvoicePayments: (invoiceId: string) => Promise<PaymentRecord[]>;
   createInvoicePayment: (invoiceId: string, payload: CreatePaymentPayload) => Promise<PaymentRecord>;
+  getInvoiceRefunds: (invoiceId: string) => Promise<RefundRecord[]>;
+  createInvoiceRefund: (invoiceId: string, payload: CreateRefundPayload) => Promise<RefundRecord>;
 };
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8080/api";
@@ -205,6 +209,12 @@ export function AuthProvider({ children }: PropsWithChildren) {
     },
     createInvoicePayment: async (invoiceId, payload) => {
       return client.createInvoicePayment(invoiceId, payload);
+    },
+    getInvoiceRefunds: async (invoiceId) => {
+      return client.listInvoiceRefunds(invoiceId);
+    },
+    createInvoiceRefund: async (invoiceId, payload) => {
+      return client.createInvoiceRefund(invoiceId, payload);
     }
   };
 

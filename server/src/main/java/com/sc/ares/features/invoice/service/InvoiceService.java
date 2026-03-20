@@ -17,6 +17,7 @@ import com.sc.ares.features.invoice.entity.Invoice;
 import com.sc.ares.features.invoice.entity.InvoiceDocumentType;
 import com.sc.ares.features.invoice.entity.InvoiceLine;
 import com.sc.ares.features.invoice.entity.InvoicePaymentStatus;
+import com.sc.ares.features.invoice.entity.InvoiceRefundStatus;
 import com.sc.ares.features.invoice.entity.InvoiceStatus;
 import com.sc.ares.features.invoice.repository.InvoiceRepository;
 import com.sc.ares.features.item.entity.Item;
@@ -51,6 +52,7 @@ public class InvoiceService {
     private final ClientRepository clientRepository;
     private final ItemRepository itemRepository;
     private final InvoicePaymentStateService invoicePaymentStateService;
+    private final InvoiceRefundStateService invoiceRefundStateService;
     private final InvoiceAccessService invoiceAccessService;
 
     public InvoiceService(
@@ -59,6 +61,7 @@ public class InvoiceService {
         ClientRepository clientRepository,
         ItemRepository itemRepository,
         InvoicePaymentStateService invoicePaymentStateService,
+        InvoiceRefundStateService invoiceRefundStateService,
         InvoiceAccessService invoiceAccessService
     ) {
         this.invoiceRepository = invoiceRepository;
@@ -66,6 +69,7 @@ public class InvoiceService {
         this.clientRepository = clientRepository;
         this.itemRepository = itemRepository;
         this.invoicePaymentStateService = invoicePaymentStateService;
+        this.invoiceRefundStateService = invoiceRefundStateService;
         this.invoiceAccessService = invoiceAccessService;
     }
 
@@ -312,6 +316,10 @@ public class InvoiceService {
     private InvoiceSummaryResponse toSummaryResponse(Invoice invoice, Map<UUID, BigDecimal> paidAmounts) {
         BigDecimal paidAmount = paidAmounts.getOrDefault(invoice.getId(), money(BigDecimal.ZERO));
         InvoicePaymentStatus paymentStatus = invoicePaymentStateService.derivePaymentStatus(invoice, paidAmount);
+        BigDecimal refundedAmount = invoiceRefundStateService.getRefundedAmount(invoice);
+        BigDecimal refundableAmount = invoiceRefundStateService.getRefundableAmount(invoice);
+        BigDecimal remainingRefundAmount = invoiceRefundStateService.getRemainingRefundAmount(invoice, refundedAmount);
+        InvoiceRefundStatus refundStatus = invoiceRefundStateService.deriveRefundStatus(invoice, refundableAmount, refundedAmount);
         LinkedInvoiceReference linkedInvoiceReference = linkedInvoiceReference(invoice);
 
         return new InvoiceSummaryResponse(
@@ -333,12 +341,20 @@ public class InvoiceService {
             invoice.getTotal(),
             paymentStatus.name(),
             paidAmount,
-            invoicePaymentStateService.getOutstandingAmount(invoice, paidAmount)
+            invoicePaymentStateService.getOutstandingAmount(invoice, paidAmount),
+            refundStatus.name(),
+            refundableAmount,
+            refundedAmount,
+            remainingRefundAmount
         );
     }
 
     private InvoiceResponse toResponse(Invoice invoice, BigDecimal paidAmount) {
         InvoicePaymentStatus paymentStatus = invoicePaymentStateService.derivePaymentStatus(invoice, paidAmount);
+        BigDecimal refundedAmount = invoiceRefundStateService.getRefundedAmount(invoice);
+        BigDecimal refundableAmount = invoiceRefundStateService.getRefundableAmount(invoice);
+        BigDecimal remainingRefundAmount = invoiceRefundStateService.getRemainingRefundAmount(invoice, refundedAmount);
+        InvoiceRefundStatus refundStatus = invoiceRefundStateService.deriveRefundStatus(invoice, refundableAmount, refundedAmount);
         LinkedInvoiceReference linkedInvoiceReference = linkedInvoiceReference(invoice);
 
         return new InvoiceResponse(
@@ -362,6 +378,10 @@ public class InvoiceService {
             paymentStatus.name(),
             paidAmount,
             invoicePaymentStateService.getOutstandingAmount(invoice, paidAmount),
+            refundStatus.name(),
+            refundableAmount,
+            refundedAmount,
+            remainingRefundAmount,
             invoice.getLines().stream().map(this::toLineResponse).toList()
         );
     }

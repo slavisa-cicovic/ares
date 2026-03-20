@@ -6,6 +6,7 @@ import com.sc.ares.features.invoice.entity.InvoicePaymentStatus;
 import com.sc.ares.features.invoice.repository.InvoiceRepository;
 import com.sc.ares.features.invoice.service.InvoiceAccessService;
 import com.sc.ares.features.invoice.service.InvoicePaymentStateService;
+import com.sc.ares.features.invoice.service.InvoiceRefundStateService;
 import com.sc.ares.features.reports.dto.ReportsSummaryResponse;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -23,15 +24,18 @@ public class ReportsService {
     private final InvoiceRepository invoiceRepository;
     private final InvoiceAccessService invoiceAccessService;
     private final InvoicePaymentStateService invoicePaymentStateService;
+    private final InvoiceRefundStateService invoiceRefundStateService;
 
     public ReportsService(
         InvoiceRepository invoiceRepository,
         InvoiceAccessService invoiceAccessService,
-        InvoicePaymentStateService invoicePaymentStateService
+        InvoicePaymentStateService invoicePaymentStateService,
+        InvoiceRefundStateService invoiceRefundStateService
     ) {
         this.invoiceRepository = invoiceRepository;
         this.invoiceAccessService = invoiceAccessService;
         this.invoicePaymentStateService = invoicePaymentStateService;
+        this.invoiceRefundStateService = invoiceRefundStateService;
     }
 
     @Transactional(readOnly = true)
@@ -49,22 +53,29 @@ public class ReportsService {
             .toList();
 
         Map<UUID, BigDecimal> paidAmounts = invoicePaymentStateService.getPaidAmounts(invoices);
+        Map<UUID, BigDecimal> refundedAmounts = invoiceRefundStateService.getRefundedAmounts(invoices);
 
         BigDecimal totalInvoicedAmount = money(BigDecimal.ZERO);
         BigDecimal totalPaidAmount = money(BigDecimal.ZERO);
+        BigDecimal totalRefundedAmount = money(BigDecimal.ZERO);
         BigDecimal totalOutstandingAmount = money(BigDecimal.ZERO);
+        BigDecimal unsettledRefundAmount = money(BigDecimal.ZERO);
         long unpaidInvoiceCount = 0;
         long partiallyPaidInvoiceCount = 0;
         long paidInvoiceCount = 0;
 
         for (Invoice invoice : invoices) {
             BigDecimal paidAmount = paidAmounts.getOrDefault(invoice.getId(), money(BigDecimal.ZERO));
+            BigDecimal refundedAmount = refundedAmounts.getOrDefault(invoice.getId(), money(BigDecimal.ZERO));
             BigDecimal outstandingAmount = invoicePaymentStateService.getOutstandingAmount(invoice, paidAmount);
             InvoicePaymentStatus paymentStatus = invoicePaymentStateService.derivePaymentStatus(invoice, paidAmount);
+            BigDecimal remainingRefundAmount = invoiceRefundStateService.getRemainingRefundAmount(invoice, refundedAmount);
 
             totalInvoicedAmount = money(totalInvoicedAmount.add(invoice.getTotal()));
             totalPaidAmount = money(totalPaidAmount.add(paidAmount));
+            totalRefundedAmount = money(totalRefundedAmount.add(refundedAmount));
             totalOutstandingAmount = money(totalOutstandingAmount.add(outstandingAmount));
+            unsettledRefundAmount = money(unsettledRefundAmount.add(remainingRefundAmount));
 
             switch (paymentStatus) {
                 case UNPAID -> unpaidInvoiceCount++;
@@ -73,7 +84,13 @@ public class ReportsService {
             }
         }
 
-        totalOutstandingAmount = money(totalInvoicedAmount.subtract(totalPaidAmount));
+        totalPaidAmount = money(totalPaidAmount.subtract(totalRefundedAmount));
+
+        if (totalPaidAmount.signum() < 0) {
+            totalPaidAmount = money(BigDecimal.ZERO);
+        }
+
+        totalOutstandingAmount = money(totalInvoicedAmount.subtract(totalPaidAmount).subtract(unsettledRefundAmount));
 
         if (totalOutstandingAmount.signum() < 0) {
             totalOutstandingAmount = money(BigDecimal.ZERO);
@@ -83,7 +100,9 @@ public class ReportsService {
             invoices.size(),
             totalInvoicedAmount,
             totalPaidAmount,
+            totalRefundedAmount,
             totalOutstandingAmount,
+            unsettledRefundAmount,
             unpaidInvoiceCount,
             partiallyPaidInvoiceCount,
             paidInvoiceCount

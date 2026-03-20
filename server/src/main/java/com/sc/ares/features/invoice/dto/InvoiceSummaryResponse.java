@@ -23,6 +23,10 @@ public record InvoiceSummaryResponse(
     BigDecimal total,
     String paymentStatus,
     BigDecimal paidAmount,
-    BigDecimal outstandingAmount
+    BigDecimal outstandingAmount,
+    String refundStatus,
+    BigDecimal refundableAmount,
+    BigDecimal refundedAmount,
+    BigDecimal remainingRefundAmount
 ) {
 }

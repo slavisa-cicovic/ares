@@ -3,6 +3,7 @@ import type {
   ApiErrorPayload,
   ChangePasswordPayload,
   CreatePaymentPayload,
+  CreateRefundPayload,
   ClientSummary,
   CompanyResponse,
   InvoiceDetail,
@@ -12,6 +13,7 @@ import type {
   ListInvoicesParams,
   ListItemsParams,
   PaymentRecord,
+  RefundRecord,
   PagedResponse,
   ReportsSummary,
   UpsertClientPayload,
@@ -247,6 +249,17 @@ export class DesktopApiClient {
 
   async createInvoicePayment(invoiceId: string, payload: CreatePaymentPayload): Promise<PaymentRecord> {
     return this.request<PaymentRecord>(`/invoices/${invoiceId}/payments`, {
+      method: "POST",
+      body: JSON.stringify(payload)
+    });
+  }
+
+  async listInvoiceRefunds(invoiceId: string): Promise<RefundRecord[]> {
+    return this.request<RefundRecord[]>(`/invoices/${invoiceId}/refunds`);
+  }
+
+  async createInvoiceRefund(invoiceId: string, payload: CreateRefundPayload): Promise<RefundRecord> {
+    return this.request<RefundRecord>(`/invoices/${invoiceId}/refunds`, {
       method: "POST",
       body: JSON.stringify(payload)
     });

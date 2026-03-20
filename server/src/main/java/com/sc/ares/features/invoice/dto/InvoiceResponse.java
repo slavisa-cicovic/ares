@@ -26,6 +26,10 @@ public record InvoiceResponse(
     String paymentStatus,
     BigDecimal paidAmount,
     BigDecimal outstandingAmount,
+    String refundStatus,
+    BigDecimal refundableAmount,
+    BigDecimal refundedAmount,
+    BigDecimal remainingRefundAmount,
     List<InvoiceLineResponse> lines
 ) {
 }

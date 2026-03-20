@@ -4,6 +4,13 @@ export type InvoicePaymentStatus = "UNPAID" | "PARTIALLY_PAID" | "PAID";
 
 export type InvoiceDocumentType = "INVOICE" | "CREDIT_NOTE";
 
+export type InvoiceRefundStatus =
+  | "NOT_APPLICABLE"
+  | "NOT_REQUIRED"
+  | "PENDING_REFUND"
+  | "PARTIALLY_REFUNDED"
+  | "REFUNDED";
+
 export type InvoiceSummary = {
   id: string;
   invoiceNumber: string;
@@ -24,11 +31,22 @@ export type InvoiceSummary = {
   paymentStatus: InvoicePaymentStatus;
   paidAmount: number;
   outstandingAmount: number;
+  refundStatus: InvoiceRefundStatus;
+  refundableAmount: number;
+  refundedAmount: number;
+  remainingRefundAmount: number;
 };
 
 export type PaymentRecord = {
   id: string;
   paymentDate: string;
+  amount: number;
+  note: string | null;
+};
+
+export type RefundRecord = {
+  id: string;
+  refundDate: string;
   amount: number;
   note: string | null;
 };
@@ -69,6 +87,10 @@ export type InvoiceDetail = {
   paymentStatus: InvoicePaymentStatus;
   paidAmount: number;
   outstandingAmount: number;
+  refundStatus: InvoiceRefundStatus;
+  refundableAmount: number;
+  refundedAmount: number;
+  remainingRefundAmount: number;
   lines: InvoiceLine[];
 };
 
@@ -102,6 +124,12 @@ export type UpsertInvoicePayload = {
 
 export type CreatePaymentPayload = {
   paymentDate: string;
+  amount: number;
+  note: string | null;
+};
+
+export type CreateRefundPayload = {
+  refundDate: string;
   amount: number;
   note: string | null;
 };

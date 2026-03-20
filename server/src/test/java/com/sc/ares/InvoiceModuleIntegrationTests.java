@@ -25,6 +25,7 @@ import com.sc.ares.features.item.entity.Item;
 import com.sc.ares.features.item.entity.ItemStatus;
 import com.sc.ares.features.item.repository.ItemRepository;
 import com.sc.ares.features.payment.repository.PaymentRepository;
+import com.sc.ares.features.refund.repository.CreditNoteRefundRepository;
 import com.sc.ares.features.user.entity.AppUser;
 import com.sc.ares.features.user.entity.UserStatus;
 import com.sc.ares.features.user.repository.UserRepository;
@@ -84,6 +85,9 @@ class InvoiceModuleIntegrationTests {
     private PaymentRepository paymentRepository;
 
     @Autowired
+    private CreditNoteRefundRepository creditNoteRefundRepository;
+
+    @Autowired
     private PasswordEncoder passwordEncoder;
 
     private Company companyOne;
@@ -99,6 +103,7 @@ class InvoiceModuleIntegrationTests {
     void setUp() {
         refreshTokenRepository.deleteAll();
         userRoleRepository.deleteAll();
+        creditNoteRefundRepository.deleteAll();
         paymentRepository.deleteAll();
         invoiceRepository.deleteAll();
         clientRepository.deleteAll();

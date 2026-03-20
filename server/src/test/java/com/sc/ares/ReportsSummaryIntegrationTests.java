@@ -24,6 +24,7 @@ import com.sc.ares.features.item.entity.Item;
 import com.sc.ares.features.item.entity.ItemStatus;
 import com.sc.ares.features.item.repository.ItemRepository;
 import com.sc.ares.features.payment.repository.PaymentRepository;
+import com.sc.ares.features.refund.repository.CreditNoteRefundRepository;
 import com.sc.ares.features.user.entity.AppUser;
 import com.sc.ares.features.user.entity.UserStatus;
 import com.sc.ares.features.user.repository.UserRepository;
@@ -83,6 +84,9 @@ class ReportsSummaryIntegrationTests {
     private PaymentRepository paymentRepository;
 
     @Autowired
+    private CreditNoteRefundRepository creditNoteRefundRepository;
+
+    @Autowired
     private PasswordEncoder passwordEncoder;
 
     private Company companyOne;
@@ -98,6 +102,7 @@ class ReportsSummaryIntegrationTests {
     void setUp() {
         refreshTokenRepository.deleteAll();
         userRoleRepository.deleteAll();
+        creditNoteRefundRepository.deleteAll();
         paymentRepository.deleteAll();
         invoiceRepository.deleteAll();
         clientRepository.deleteAll();
@@ -232,6 +237,48 @@ class ReportsSummaryIntegrationTests {
             .andExpect(jsonPath("$.invoiceCount").value(2))
             .andExpect(jsonPath("$.totalInvoicedAmount").value(0.00))
             .andExpect(jsonPath("$.totalPaidAmount").value(0.00))
+            .andExpect(jsonPath("$.totalRefundedAmount").value(0.00))
+            .andExpect(jsonPath("$.unsettledRefundAmount").value(0.00))
+            .andExpect(jsonPath("$.totalOutstandingAmount").value(0.00));
+    }
+
+    @Test
+    void summaryShouldReflectRefundedCreditNotes() throws Exception {
+        String token = login("admin.one@local.ares", "ares-test").get("accessToken").asText();
+        JsonNode invoice = createAndIssueInvoice(token, companyOneClient.getId(), companyOneItem.getId(), "2026-03-10", "2026-03-17");
+
+        createPayment(token, invoice.get("id").asText(), "2026-03-18", "480.00");
+
+        MvcResult creditNoteResult = mockMvc.perform(
+                post("/invoices/{invoiceId}/credit-note", invoice.get("id").asText())
+                    .header("Authorization", bearer(token))
+            )
+            .andExpect(status().isOk())
+            .andReturn();
+
+        JsonNode creditNote = objectMapper.readTree(creditNoteResult.getResponse().getContentAsString());
+
+        mockMvc.perform(
+                post("/invoices/{invoiceId}/refunds", creditNote.get("id").asText())
+                    .header("Authorization", bearer(token))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(Map.of(
+                        "refundDate", "2026-03-20",
+                        "amount", "480.00",
+                        "note", "Refund"
+                    )))
+            )
+            .andExpect(status().isCreated());
+
+        mockMvc.perform(
+                get("/reports/summary")
+                    .header("Authorization", bearer(token))
+            )
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.totalInvoicedAmount").value(0.00))
+            .andExpect(jsonPath("$.totalPaidAmount").value(0.00))
+            .andExpect(jsonPath("$.totalRefundedAmount").value(480.00))
+            .andExpect(jsonPath("$.unsettledRefundAmount").value(0.00))
             .andExpect(jsonPath("$.totalOutstandingAmount").value(0.00));
     }
 

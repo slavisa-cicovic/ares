@@ -6,7 +6,9 @@ public record ReportsSummaryResponse(
     long invoiceCount,
     BigDecimal totalInvoicedAmount,
     BigDecimal totalPaidAmount,
+    BigDecimal totalRefundedAmount,
     BigDecimal totalOutstandingAmount,
+    BigDecimal unsettledRefundAmount,
     long unpaidInvoiceCount,
     long partiallyPaidInvoiceCount,
     long paidInvoiceCount

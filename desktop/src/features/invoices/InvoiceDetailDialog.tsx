@@ -15,9 +15,10 @@ import {
 } from "@mui/material";
 import { ConfirmDialog, CustomDialog } from "../../components";
 import { ApiClientError } from "../../lib/api/DesktopApiClient";
-import type { InvoiceDetail, PaymentRecord } from "../../lib/api/types";
+import type { InvoiceDetail, PaymentRecord, RefundRecord } from "../../lib/api/types";
 import { useAuth } from "../auth/AuthProvider";
 import { PaymentDialog } from "./PaymentDialog";
+import { RefundDialog } from "./RefundDialog";
 
 type InvoiceDetailDialogProps = {
   invoiceId: string | null;
@@ -60,6 +61,18 @@ function paymentStatusColor(status: string): "default" | "warning" | "success" {
   return "default";
 }
 
+function refundStatusColor(status: string): "default" | "warning" | "success" {
+  if (status === "REFUNDED" || status === "NOT_REQUIRED") {
+    return "success";
+  }
+
+  if (status === "PARTIALLY_REFUNDED" || status === "PENDING_REFUND") {
+    return "warning";
+  }
+
+  return "default";
+}
+
 export function InvoiceDetailDialog({
   invoiceId,
   open,
@@ -69,12 +82,14 @@ export function InvoiceDetailDialog({
   onChanged,
   onOpenInvoice
 }: InvoiceDetailDialogProps) {
-  const { getInvoice, getInvoicePayments, createInvoiceCreditNote } = useAuth();
+  const { getInvoice, getInvoicePayments, getInvoiceRefunds, createInvoiceCreditNote } = useAuth();
   const [invoice, setInvoice] = useState<InvoiceDetail | null>(null);
   const [payments, setPayments] = useState<PaymentRecord[]>([]);
+  const [refunds, setRefunds] = useState<RefundRecord[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
+  const [isRefundDialogOpen, setIsRefundDialogOpen] = useState(false);
   const [isConfirmCreditNoteOpen, setIsConfirmCreditNoteOpen] = useState(false);
   const [isCreatingCreditNote, setIsCreatingCreditNote] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
@@ -88,11 +103,19 @@ export function InvoiceDetailDialog({
     setIsLoading(true);
     setError(null);
 
-    void Promise.all([getInvoice(invoiceId), getInvoicePayments(invoiceId)])
-      .then(([invoiceResponse, paymentResponse]) => {
+    void getInvoice(invoiceId)
+      .then(async (invoiceResponse) => {
+        const paymentResponse = invoiceResponse.documentType === "INVOICE"
+          ? await getInvoicePayments(invoiceId)
+          : [];
+        const refundResponse = invoiceResponse.documentType === "CREDIT_NOTE"
+          ? await getInvoiceRefunds(invoiceId)
+          : [];
+
         if (active) {
           setInvoice(invoiceResponse);
           setPayments(paymentResponse);
+          setRefunds(refundResponse);
         }
       })
       .catch((requestError) => {
@@ -104,6 +127,7 @@ export function InvoiceDetailDialog({
           );
           setInvoice(null);
           setPayments([]);
+          setRefunds([]);
         }
       })
       .finally(() => {
@@ -115,7 +139,7 @@ export function InvoiceDetailDialog({
     return () => {
       active = false;
     };
-  }, [getInvoice, getInvoicePayments, invoiceId, open, reloadKey]);
+  }, [getInvoice, getInvoicePayments, getInvoiceRefunds, invoiceId, open, reloadKey]);
 
   return (
     <CustomDialog
@@ -139,6 +163,14 @@ export function InvoiceDetailDialog({
           invoice.outstandingAmount > 0 ? (
             <Button onClick={() => setIsPaymentDialogOpen(true)} variant="contained">
               Add Payment
+            </Button>
+          ) : null}
+
+          {canManagePayments &&
+          invoice?.documentType === "CREDIT_NOTE" &&
+          invoice.remainingRefundAmount > 0 ? (
+            <Button onClick={() => setIsRefundDialogOpen(true)} variant="contained">
+              Record Refund
             </Button>
           ) : null}
         </Stack>
@@ -184,7 +216,13 @@ export function InvoiceDetailDialog({
                 size="small"
                 variant={invoice.documentType === "CREDIT_NOTE" ? "outlined" : "filled"}
               />
-              <Chip color={paymentStatusColor(invoice.paymentStatus)} label={invoice.paymentStatus} size="small" />
+              <Chip
+                color={invoice.documentType === "CREDIT_NOTE"
+                  ? refundStatusColor(invoice.refundStatus)
+                  : paymentStatusColor(invoice.paymentStatus)}
+                label={invoice.documentType === "CREDIT_NOTE" ? invoice.refundStatus : invoice.paymentStatus}
+                size="small"
+              />
             </Stack>
           </Stack>
 
@@ -255,9 +293,34 @@ export function InvoiceDetailDialog({
           <Divider />
 
           <Stack spacing={1.5}>
-            <Typography variant="subtitle1">Payments</Typography>
+            <Typography variant="subtitle1">{invoice.documentType === "CREDIT_NOTE" ? "Refunds" : "Payments"}</Typography>
 
-            {payments.length === 0 ? (
+            {invoice.documentType === "CREDIT_NOTE" ? (
+              refunds.length === 0 ? (
+                <Typography color="text.secondary" variant="body2">
+                  No refunds recorded yet.
+                </Typography>
+              ) : (
+                <Table size="small">
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Date</TableCell>
+                      <TableCell align="right">Amount</TableCell>
+                      <TableCell>Note</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {refunds.map((refund) => (
+                      <TableRow key={refund.id}>
+                        <TableCell>{formatDate(refund.refundDate)}</TableCell>
+                        <TableCell align="right">{formatMoney(refund.amount, invoice.currency)}</TableCell>
+                        <TableCell>{refund.note || "—"}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )
+            ) : payments.length === 0 ? (
               <Typography color="text.secondary" variant="body2">
                 No payments recorded yet.
               </Typography>
@@ -298,6 +361,13 @@ export function InvoiceDetailDialog({
             <TotalsRow label="Total" value={formatMoney(invoice.total, invoice.currency)} />
             <TotalsRow label="Paid" value={formatMoney(invoice.paidAmount, invoice.currency)} />
             <TotalsRow label="Outstanding" value={formatMoney(invoice.outstandingAmount, invoice.currency)} strong />
+            {invoice.documentType === "CREDIT_NOTE" ? (
+              <>
+                <TotalsRow label="Refundable" value={formatMoney(invoice.refundableAmount, invoice.currency)} />
+                <TotalsRow label="Refunded" value={formatMoney(invoice.refundedAmount, invoice.currency)} />
+                <TotalsRow label="Remaining Refund" value={formatMoney(invoice.remainingRefundAmount, invoice.currency)} strong />
+              </>
+            ) : null}
           </Box>
         </Stack>
       ) : null}
@@ -312,6 +382,17 @@ export function InvoiceDetailDialog({
           onChanged();
         }}
         open={isPaymentDialogOpen}
+      />
+      <RefundDialog
+        currency={invoice?.currency ?? "RSD"}
+        defaultAmount={invoice?.remainingRefundAmount ?? 0}
+        invoiceId={invoiceId}
+        onClose={() => setIsRefundDialogOpen(false)}
+        onSaved={() => {
+          setReloadKey((current) => current + 1);
+          onChanged();
+        }}
+        open={isRefundDialogOpen}
       />
       <ConfirmDialog
         confirmLabel={isCreatingCreditNote ? "Creating..." : "Create Credit Note"}

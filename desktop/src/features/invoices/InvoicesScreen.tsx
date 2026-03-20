@@ -93,6 +93,18 @@ function paymentStatusColor(status: InvoicePaymentStatus): "default" | "warning"
   return "default";
 }
 
+function refundStatusColor(status: string): "default" | "warning" | "success" {
+  if (status === "REFUNDED" || status === "NOT_REQUIRED") {
+    return "success";
+  }
+
+  if (status === "PARTIALLY_REFUNDED" || status === "PENDING_REFUND") {
+    return "warning";
+  }
+
+  return "default";
+}
+
 function canEditDraft(user: AuthenticatedUser, invoice: InvoiceSummary): boolean {
   return user.roles.includes("company-admin") && invoice.status === "DRAFT" && invoice.documentType === "INVOICE";
 }
@@ -333,7 +345,13 @@ export function InvoicesScreen() {
                             <Chip color={statusColor(invoice.status)} label={invoice.status} size="small" />
                           </TableCell>
                           <TableCell>
-                            <Chip color={paymentStatusColor(invoice.paymentStatus)} label={invoice.paymentStatus} size="small" />
+                            <Chip
+                              color={invoice.documentType === "CREDIT_NOTE"
+                                ? refundStatusColor(invoice.refundStatus)
+                                : paymentStatusColor(invoice.paymentStatus)}
+                              label={invoice.documentType === "CREDIT_NOTE" ? invoice.refundStatus : invoice.paymentStatus}
+                              size="small"
+                            />
                           </TableCell>
                           <TableCell align="right">{formatMoney(invoice.total, invoice.currency)}</TableCell>
                           <TableCell align="right">{formatMoney(invoice.outstandingAmount, invoice.currency)}</TableCell>
