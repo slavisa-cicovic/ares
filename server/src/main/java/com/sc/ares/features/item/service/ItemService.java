@@ -11,6 +11,8 @@ import com.sc.ares.features.item.dto.UpsertItemRequest;
 import com.sc.ares.features.item.entity.Item;
 import com.sc.ares.features.item.entity.ItemStatus;
 import com.sc.ares.features.item.repository.ItemRepository;
+import com.sc.ares.features.user.entity.AppUser;
+import com.sc.ares.features.user.repository.UserRepository;
 import java.math.BigDecimal;
 import java.util.Map;
 import java.util.UUID;
@@ -35,15 +37,18 @@ public class ItemService {
 
     private final ItemRepository itemRepository;
     private final CompanyRepository companyRepository;
+    private final UserRepository userRepository;
     private final ItemAccessService itemAccessService;
 
     public ItemService(
         ItemRepository itemRepository,
         CompanyRepository companyRepository,
+        UserRepository userRepository,
         ItemAccessService itemAccessService
     ) {
         this.itemRepository = itemRepository;
         this.companyRepository = companyRepository;
+        this.userRepository = userRepository;
         this.itemAccessService = itemAccessService;
     }
 
@@ -89,12 +94,14 @@ public class ItemService {
         UUID companyId = itemAccessService.getRequiredWritableCompanyId();
         Company company = companyRepository.findByIdAndDeletedAtIsNull(companyId)
             .orElseThrow(() -> new ResourceNotFoundException("Company not found."));
+        AppUser createdByUser = getRequiredCurrentUser(companyId);
 
         String normalizedCode = normalizeOptional(request.code());
         ensureCodeAvailableForCreate(companyId, normalizedCode);
 
         Item item = Item.create(
             company,
+            createdByUser,
             normalizeRequired(request.name()),
             normalizedCode,
             normalizeOptional(request.description()),
@@ -111,6 +118,7 @@ public class ItemService {
     public ItemResponse updateItem(UUID itemId, UpsertItemRequest request) {
         UUID companyId = itemAccessService.getRequiredWritableCompanyId();
         Item item = getRequiredItem(itemId, companyId);
+        itemAccessService.ensureCanModify(item);
 
         String normalizedCode = normalizeOptional(request.code());
         ensureCodeAvailableForUpdate(companyId, itemId, normalizedCode);
@@ -132,6 +140,7 @@ public class ItemService {
     public void deleteItem(UUID itemId) {
         UUID companyId = itemAccessService.getRequiredWritableCompanyId();
         Item item = getRequiredItem(itemId, companyId);
+        itemAccessService.ensureCanModify(item);
         item.softDelete();
         itemRepository.save(item);
     }
@@ -139,6 +148,13 @@ public class ItemService {
     private Item getRequiredItem(UUID itemId, UUID companyId) {
         return itemRepository.findByIdAndCompanyIdAndDeletedAtIsNull(itemId, companyId)
             .orElseThrow(() -> new ResourceNotFoundException("Item not found."));
+    }
+
+    private AppUser getRequiredCurrentUser(UUID companyId) {
+        UUID userId = itemAccessService.getRequiredCreatePrincipal().userId();
+
+        return userRepository.findByIdAndCompanyIdAndDeletedAtIsNull(userId, companyId)
+            .orElseThrow(() -> new ResourceNotFoundException("User not found."));
     }
 
     private void ensureCodeAvailableForCreate(UUID companyId, String code) {

@@ -1,6 +1,7 @@
 package com.sc.ares.features.item.entity;
 
 import com.sc.ares.features.company.entity.Company;
+import com.sc.ares.features.user.entity.AppUser;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -27,6 +28,10 @@ public class Item {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "company_id")
     private Company company;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "created_by_user_id")
+    private AppUser createdByUser;
 
     @Column(nullable = false, length = 255)
     private String name;
@@ -64,6 +69,7 @@ public class Item {
 
     public static Item create(
         Company company,
+        AppUser createdByUser,
         String name,
         String code,
         String description,
@@ -76,6 +82,7 @@ public class Item {
 
         Item item = new Item();
         item.company = company;
+        item.createdByUser = createdByUser;
         item.name = name;
         item.code = code;
         item.description = description;
@@ -95,6 +102,10 @@ public class Item {
 
     public Company getCompany() {
         return company;
+    }
+
+    public AppUser getCreatedByUser() {
+        return createdByUser;
     }
 
     public String getName() {

@@ -91,6 +91,8 @@ class ReportsSummaryIntegrationTests {
     private Client companyTwoClient;
     private Item companyOneItem;
     private Item companyTwoItem;
+    private AppUser adminOne;
+    private AppUser adminTwo;
 
     @BeforeEach
     void setUp() {
@@ -114,9 +116,9 @@ class ReportsSummaryIntegrationTests {
             null, "user", "User", RoleScope.COMPANY, true
         ));
 
-        createUser(companyOne, "admin.one@local.ares", companyAdminRole);
+        adminOne = createUser(companyOne, "admin.one@local.ares", companyAdminRole);
         createUser(companyOne, "user.one@local.ares", userRole);
-        createUser(companyTwo, "admin.two@local.ares", companyAdminRole);
+        adminTwo = createUser(companyTwo, "admin.two@local.ares", companyAdminRole);
 
         companyOneClient = clientRepository.save(Client.create(
             companyOne, "Acme Client", "111", "222", "acme@local.ares", "123", "Street 1", "Belgrade", "11000", "Serbia", ClientStatus.ACTIVE
@@ -125,11 +127,11 @@ class ReportsSummaryIntegrationTests {
             companyTwo, "Beta Client", "333", "444", "beta@local.ares", "456", "Neka 2", "Novi Sad", "21000", "Serbia", ClientStatus.ACTIVE
         ));
         companyOneItem = itemRepository.save(Item.create(
-            companyOne, "Development Service", "DEV-001", "Monthly development", "hour",
+            companyOne, adminOne, "Development Service", "DEV-001", "Monthly development", "hour",
             new BigDecimal("100.00"), new BigDecimal("20.00"), ItemStatus.ACTIVE
         ));
         companyTwoItem = itemRepository.save(Item.create(
-            companyTwo, "Support Service", "SUP-001", "Support", "hour",
+            companyTwo, adminTwo, "Support Service", "SUP-001", "Support", "hour",
             new BigDecimal("80.00"), new BigDecimal("10.00"), ItemStatus.ACTIVE
         ));
     }

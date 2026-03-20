@@ -87,6 +87,9 @@ class ItemModuleIntegrationTests {
     private Company companyTwo;
     private Item companyOneItem;
     private Item companyTwoItem;
+    private AppUser adminOne;
+    private AppUser userOne;
+    private AppUser adminTwo;
 
     @BeforeEach
     void setUp() {
@@ -110,12 +113,13 @@ class ItemModuleIntegrationTests {
             null, "user", "User", RoleScope.COMPANY, true
         ));
 
-        createUser(companyOne, "admin.one@local.ares", companyAdminRole);
-        createUser(companyOne, "user.one@local.ares", userRole);
-        createUser(companyTwo, "admin.two@local.ares", companyAdminRole);
+        adminOne = createUser(companyOne, "admin.one@local.ares", companyAdminRole);
+        userOne = createUser(companyOne, "user.one@local.ares", userRole);
+        adminTwo = createUser(companyTwo, "admin.two@local.ares", companyAdminRole);
 
         companyOneItem = itemRepository.save(Item.create(
             companyOne,
+            adminOne,
             "Development Service",
             "DEV-001",
             "Monthly development service",
@@ -126,6 +130,7 @@ class ItemModuleIntegrationTests {
         ));
         companyTwoItem = itemRepository.save(Item.create(
             companyTwo,
+            adminTwo,
             "Beta Support",
             "SUP-001",
             "Support package",
@@ -167,16 +172,18 @@ class ItemModuleIntegrationTests {
     }
 
     @Test
-    void regularUserShouldNotCreateItem() throws Exception {
+    void regularUserShouldCreateItemInOwnCompany() throws Exception {
         String token = login("user.one@local.ares", "ares-test").get("accessToken").asText();
 
         mockMvc.perform(
                 post("/items")
                     .header("Authorization", bearer(token))
                     .contentType(MediaType.APPLICATION_JSON)
-                    .content(itemPayload("Nope", "NO-001", "piece", "10.00", "20.00", "ACTIVE"))
+                    .content(itemPayload("User Created Item", "USR-001", "piece", "10.00", "20.00", "ACTIVE"))
             )
-            .andExpect(status().isForbidden());
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.name").value("User Created Item"))
+            .andExpect(jsonPath("$.code").value("USR-001"));
     }
 
     @Test
@@ -244,6 +251,45 @@ class ItemModuleIntegrationTests {
     }
 
     @Test
+    void regularUserShouldUpdateOwnItem() throws Exception {
+        String token = login("user.one@local.ares", "ares-test").get("accessToken").asText();
+
+        MvcResult createResult = mockMvc.perform(
+                post("/items")
+                    .header("Authorization", bearer(token))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(itemPayload("My Item", "MY-001", "piece", "25.00", "20.00", "ACTIVE"))
+            )
+            .andExpect(status().isCreated())
+            .andReturn();
+
+        JsonNode createdItem = objectMapper.readTree(createResult.getResponse().getContentAsString());
+        String itemId = createdItem.get("id").asText();
+
+        mockMvc.perform(
+                put("/items/{itemId}", itemId)
+                    .header("Authorization", bearer(token))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(itemPayload("My Item Updated", "MY-001", "piece", "30.00", "20.00", "ACTIVE"))
+            )
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.name").value("My Item Updated"));
+    }
+
+    @Test
+    void regularUserShouldNotUpdateAnotherUsersItemInSameCompany() throws Exception {
+        String token = login("user.one@local.ares", "ares-test").get("accessToken").asText();
+
+        mockMvc.perform(
+                put("/items/{itemId}", companyOneItem.getId())
+                    .header("Authorization", bearer(token))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(itemPayload("Updated", "DEV-001", "service", "100.00", "20.00", "ACTIVE"))
+            )
+            .andExpect(status().isForbidden());
+    }
+
+    @Test
     void softDeletedItemShouldDisappearFromNormalReads() throws Exception {
         String token = login("admin.one@local.ares", "ares-test").get("accessToken").asText();
 
@@ -258,6 +304,39 @@ class ItemModuleIntegrationTests {
                     .header("Authorization", bearer(token))
             )
             .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void regularUserShouldDeleteOwnItem() throws Exception {
+        String token = login("user.one@local.ares", "ares-test").get("accessToken").asText();
+
+        MvcResult createResult = mockMvc.perform(
+                post("/items")
+                    .header("Authorization", bearer(token))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(itemPayload("Disposable Item", "DEL-001", "piece", "15.00", "20.00", "ACTIVE"))
+            )
+            .andExpect(status().isCreated())
+            .andReturn();
+
+        String itemId = objectMapper.readTree(createResult.getResponse().getContentAsString()).get("id").asText();
+
+        mockMvc.perform(
+                delete("/items/{itemId}", itemId)
+                    .header("Authorization", bearer(token))
+            )
+            .andExpect(status().isNoContent());
+    }
+
+    @Test
+    void regularUserShouldNotDeleteAnotherUsersItemInSameCompany() throws Exception {
+        String token = login("user.one@local.ares", "ares-test").get("accessToken").asText();
+
+        mockMvc.perform(
+                delete("/items/{itemId}", companyOneItem.getId())
+                    .header("Authorization", bearer(token))
+            )
+            .andExpect(status().isForbidden());
     }
 
     @Test
