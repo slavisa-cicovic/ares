@@ -81,4 +81,4 @@ npm run dev
 ```
 
 The desktop app expects the backend to be available at `VITE_API_BASE_URL`.
-The default development value is `http://localhost:8080`.
+The default development value is `http://localhost:8080/api`.
