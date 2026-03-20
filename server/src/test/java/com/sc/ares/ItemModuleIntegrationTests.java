@@ -88,7 +88,6 @@ class ItemModuleIntegrationTests {
     private Item companyOneItem;
     private Item companyTwoItem;
     private AppUser adminOne;
-    private AppUser userOne;
     private AppUser adminTwo;
 
     @BeforeEach
@@ -114,7 +113,7 @@ class ItemModuleIntegrationTests {
         ));
 
         adminOne = createUser(companyOne, "admin.one@local.ares", companyAdminRole);
-        userOne = createUser(companyOne, "user.one@local.ares", userRole);
+        createUser(companyOne, "user.one@local.ares", userRole);
         adminTwo = createUser(companyTwo, "admin.two@local.ares", companyAdminRole);
 
         companyOneItem = itemRepository.save(Item.create(
