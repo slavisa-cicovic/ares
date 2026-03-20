@@ -1,5 +1,18 @@
 package com.sc.ares.features.auth.service;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.time.LocalDate;
+import java.util.List;
+import java.util.Map;
+
+import org.springframework.boot.ApplicationArguments;
+import org.springframework.boot.ApplicationRunner;
+import org.springframework.context.annotation.Profile;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.sc.ares.features.auth.entity.Role;
 import com.sc.ares.features.auth.entity.UserRole;
 import com.sc.ares.features.auth.repository.RoleRepository;
@@ -22,19 +35,6 @@ import com.sc.ares.features.payment.repository.PaymentRepository;
 import com.sc.ares.features.user.entity.AppUser;
 import com.sc.ares.features.user.entity.UserStatus;
 import com.sc.ares.features.user.repository.UserRepository;
-import java.math.BigDecimal;
-import java.math.RoundingMode;
-import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-import org.springframework.boot.ApplicationArguments;
-import org.springframework.boot.ApplicationRunner;
-import org.springframework.context.annotation.Profile;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
 
 @Component
 @Profile("dev")
