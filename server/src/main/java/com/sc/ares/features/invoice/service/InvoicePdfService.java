@@ -115,7 +115,7 @@ public class InvoicePdfService {
 
         StringBuilder html = new StringBuilder();
         html.append("""
-<html xmlns="http://www.w3.org/1999/xhtml" lang="sr">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en">
 <head>
   <meta charset="utf-8" />
   <style>
@@ -154,52 +154,52 @@ public class InvoicePdfService {
         html.append("<div class=\"brand-mark\" style=\"background: ").append(escapeHtml(brandColor)).append(";\">")
             .append(escapeHtml(company.getName().substring(0, 1).toUpperCase(SERBIAN_LOCALE))).append("</div>");
         html.append("</td><td><h1 class=\"doc-title\">")
-            .append(invoice.getDocumentType() == InvoiceDocumentType.CREDIT_NOTE ? "Kreditna nota" : "Faktura")
+            .append(invoice.getDocumentType() == InvoiceDocumentType.CREDIT_NOTE ? "Credit Note" : "Invoice")
             .append("</h1><p class=\"doc-subtitle\">").append(escapeHtml(company.getName())).append("</p></td></tr></table></td>");
         html.append("<td style=\"width: 38%;\">");
-        appendMetaCard(html, "Dokument", List.of(
-            metaRow("Broj", invoice.getInvoiceNumber()),
-            metaRow("Datum izdavanja", formatDate(invoice.getIssueDate())),
-            metaRow("Rok dospeća", formatDate(invoice.getDueDate())),
-            metaRow("Valuta", invoice.getCurrency())
+        appendMetaCard(html, "Document", List.of(
+            metaRow("Number", invoice.getInvoiceNumber()),
+            metaRow("Issue Date", formatDate(invoice.getIssueDate())),
+            metaRow("Due Date", formatDate(invoice.getDueDate())),
+            metaRow("Currency", invoice.getCurrency())
         ));
         html.append("</td></tr></table>");
 
         html.append("<div class=\"spacer\"></div><table class=\"header-table\"><tr>");
         html.append("<td style=\"width: 50%; padding-right: 8px;\">");
-        appendMetaCard(html, "Izdavalac", List.of(
-            metaRow("Naziv", company.getName()),
+        appendMetaCard(html, "Issuer", List.of(
+            metaRow("Name", company.getName()),
             metaRow("PIB", company.getPib()),
             metaRow("MB", company.getMb()),
-            metaRow("Adresa", company.getAddress()),
+            metaRow("Address", company.getAddress()),
             metaRow("Email", company.getEmail()),
-            metaRow("Telefon", company.getPhone()),
-            metaRow("Račun", company.getBankAccount())
+            metaRow("Phone", company.getPhone()),
+            metaRow("Bank Account", company.getBankAccount())
         ));
         html.append("</td><td style=\"width: 50%; padding-left: 8px;\">");
-        appendMetaCard(html, "Klijent", List.of(
-            metaRow("Naziv", client.getName()),
+        appendMetaCard(html, "Client", List.of(
+            metaRow("Name", client.getName()),
             metaRow("PIB", client.getPib()),
             metaRow("MB", client.getMb()),
-            metaRow("Adresa", joinAddress(client)),
+            metaRow("Address", joinAddress(client)),
             metaRow("Email", client.getEmail()),
-            metaRow("Telefon", client.getPhone())
+            metaRow("Phone", client.getPhone())
         ));
         html.append("</td></tr></table>");
 
         if (invoice.getDocumentType() == InvoiceDocumentType.CREDIT_NOTE && invoice.getOriginalInvoice() != null) {
-            html.append("<div class=\"note\"><strong>Veza:</strong> Kreditna nota je vezana za fakturu ")
+            html.append("<div class=\"note\"><strong>Reference:</strong> This credit note references invoice ")
                 .append(escapeHtml(invoice.getOriginalInvoice().getInvoiceNumber())).append(".</div>");
         } else if (linkedCreditNote != null) {
-            html.append("<div class=\"note\"><strong>Veza:</strong> Ova faktura ima kreditnu notu ")
+            html.append("<div class=\"note\"><strong>Reference:</strong> This invoice has credit note ")
                 .append(escapeHtml(linkedCreditNote.getInvoiceNumber())).append(".</div>");
         }
 
         html.append("<table class=\"line-table\"><thead><tr>");
-        html.append("<th style=\"width: 6%;\">#</th><th style=\"width: 31%;\">Stavka</th><th style=\"width: 11%;\">Šifra</th>");
-        html.append("<th style=\"width: 10%;\">JM</th><th class=\"num\" style=\"width: 11%;\">Količina</th>");
-        html.append("<th class=\"num\" style=\"width: 13%;\">Cena</th><th class=\"num\" style=\"width: 8%;\">PDV</th>");
-        html.append("<th class=\"num\" style=\"width: 10%;\">Ukupno</th></tr></thead><tbody>");
+        html.append("<th style=\"width: 6%;\">#</th><th style=\"width: 31%;\">Item</th><th style=\"width: 11%;\">Code</th>");
+        html.append("<th style=\"width: 10%;\">Unit</th><th class=\"num\" style=\"width: 11%;\">Quantity</th>");
+        html.append("<th class=\"num\" style=\"width: 13%;\">Price</th><th class=\"num\" style=\"width: 8%;\">Tax</th>");
+        html.append("<th class=\"num\" style=\"width: 10%;\">Total</th></tr></thead><tbody>");
 
         for (InvoiceLine line : invoice.getLines()) {
             html.append("<tr><td>").append(line.getLineNumber()).append("</td><td>").append(escapeHtml(line.getItemName())).append("</td>");
@@ -213,22 +213,22 @@ public class InvoicePdfService {
         html.append("</tbody></table>");
 
         html.append("<div class=\"summary-wrap\"><table class=\"summary-table\">");
-        appendSummaryRow(html, "Osnovica", formatMoney(invoice.getSubtotal(), invoice.getCurrency()), false);
-        appendSummaryRow(html, "PDV", formatMoney(invoice.getTaxTotal(), invoice.getCurrency()), false);
-        appendSummaryRow(html, "Ukupno", formatMoney(invoice.getTotal(), invoice.getCurrency()), true);
+        appendSummaryRow(html, "Subtotal", formatMoney(invoice.getSubtotal(), invoice.getCurrency()), false);
+        appendSummaryRow(html, "Tax", formatMoney(invoice.getTaxTotal(), invoice.getCurrency()), false);
+        appendSummaryRow(html, "Total", formatMoney(invoice.getTotal(), invoice.getCurrency()), true);
         if (invoice.getDocumentType() == InvoiceDocumentType.INVOICE) {
-            appendSummaryRow(html, "Plaćeno", formatMoney(paidAmount, invoice.getCurrency()), false);
+            appendSummaryRow(html, "Paid", formatMoney(paidAmount, invoice.getCurrency()), false);
             appendSummaryRow(
                 html,
-                "Preostalo za naplatu",
+                "Outstanding",
                 formatMoney(invoicePaymentStateService.getOutstandingAmount(invoice, paidAmount), invoice.getCurrency()),
                 false
             );
         } else {
-            appendSummaryRow(html, "Refundirano", formatMoney(refundedAmount, invoice.getCurrency()), false);
+            appendSummaryRow(html, "Refunded", formatMoney(refundedAmount, invoice.getCurrency()), false);
             appendSummaryRow(
                 html,
-                "Preostalo za refund",
+                "Remaining Refund",
                 formatMoney(invoiceRefundStateService.getRemainingRefundAmount(invoice, refundedAmount), invoice.getCurrency()),
                 false
             );
@@ -236,13 +236,13 @@ public class InvoicePdfService {
         html.append("</table></div>");
 
         if (invoice.getNote() != null && !invoice.getNote().isBlank()) {
-            html.append("<div class=\"note\"><strong>Napomena:</strong><br />")
+            html.append("<div class=\"note\"><strong>Note:</strong><br />")
                 .append(escapeHtml(invoice.getNote())).append("</div>");
         }
 
         if (!payments.isEmpty()) {
-            html.append("<div class=\"spacer\"></div><p class=\"section-title\">Istorija uplata</p>");
-            html.append("<table class=\"history-table\"><thead><tr><th>Datum</th><th>Napomena</th><th class=\"num\">Iznos</th></tr></thead><tbody>");
+            html.append("<div class=\"spacer\"></div><p class=\"section-title\">Payment History</p>");
+            html.append("<table class=\"history-table\"><thead><tr><th>Date</th><th>Note</th><th class=\"num\">Amount</th></tr></thead><tbody>");
             for (Payment payment : payments) {
                 html.append("<tr><td>").append(formatDate(payment.getPaymentDate())).append("</td><td>")
                     .append(escapeHtml(orDash(payment.getNote()))).append("</td><td class=\"num\">")
@@ -252,8 +252,8 @@ public class InvoicePdfService {
         }
 
         if (!refunds.isEmpty()) {
-            html.append("<div class=\"spacer\"></div><p class=\"section-title\">Istorija refunda</p>");
-            html.append("<table class=\"history-table\"><thead><tr><th>Datum</th><th>Napomena</th><th class=\"num\">Iznos</th></tr></thead><tbody>");
+            html.append("<div class=\"spacer\"></div><p class=\"section-title\">Refund History</p>");
+            html.append("<table class=\"history-table\"><thead><tr><th>Date</th><th>Note</th><th class=\"num\">Amount</th></tr></thead><tbody>");
             for (CreditNoteRefund refund : refunds) {
                 html.append("<tr><td>").append(formatDate(refund.getRefundDate())).append("</td><td>")
                     .append(escapeHtml(orDash(refund.getNote()))).append("</td><td class=\"num\">")
