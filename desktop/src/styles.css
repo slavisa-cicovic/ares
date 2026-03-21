@@ -301,6 +301,36 @@ input {
   border-color: var(--accent);
 }
 
+.password-field {
+  position: relative;
+}
+
+.password-field input {
+  padding-right: 48px;
+}
+
+.password-toggle {
+  position: absolute;
+  top: 50%;
+  right: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 10px;
+  padding: 0;
+  background: transparent;
+  color: color-mix(in srgb, var(--page-text) 72%, transparent);
+  cursor: pointer;
+  transform: translateY(-50%);
+}
+
+.password-toggle:hover {
+  background: color-mix(in srgb, var(--muted-button) 85%, transparent);
+}
+
 .primary-button,
 .secondary-button {
   border: 0;

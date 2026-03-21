@@ -1,4 +1,6 @@
 import { useState } from "react";
+import VisibilityOffRoundedIcon from "@mui/icons-material/VisibilityOffRounded";
+import VisibilityRoundedIcon from "@mui/icons-material/VisibilityRounded";
 import { ApiClientError } from "../../lib/api/DesktopApiClient";
 import { useAuth } from "./AuthProvider";
 
@@ -6,6 +8,7 @@ export function LoginScreen() {
   const { login, state } = useAuth();
   const [email, setEmail] = useState("admin.one@local.ares");
   const [password, setPassword] = useState("ares-dev");
+  const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -57,12 +60,22 @@ export function LoginScreen() {
 
           <label className="field">
             <span>Password</span>
-            <input
-              autoComplete="current-password"
-              onChange={(event) => setPassword(event.target.value)}
-              type="password"
-              value={password}
-            />
+            <div className="password-field">
+              <input
+                autoComplete="current-password"
+                onChange={(event) => setPassword(event.target.value)}
+                type={isPasswordVisible ? "text" : "password"}
+                value={password}
+              />
+              <button
+                aria-label={isPasswordVisible ? "Hide password" : "Show password"}
+                className="password-toggle"
+                onClick={() => setIsPasswordVisible((current) => !current)}
+                type="button"
+              >
+                {isPasswordVisible ? <VisibilityOffRoundedIcon fontSize="small" /> : <VisibilityRoundedIcon fontSize="small" />}
+              </button>
+            </div>
           </label>
 
           {(error || state.status === "unauthenticated" && state.error) && (
