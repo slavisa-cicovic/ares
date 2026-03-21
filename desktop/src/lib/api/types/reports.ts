@@ -9,3 +9,8 @@ export type ReportsSummary = {
   partiallyPaidInvoiceCount: number;
   paidInvoiceCount: number;
 };
+
+export type GetReportsSummaryParams = {
+  from?: string;
+  to?: string;
+};

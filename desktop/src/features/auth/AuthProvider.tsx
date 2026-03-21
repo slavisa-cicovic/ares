@@ -26,6 +26,7 @@ import type {
   PaymentSummary,
   RefundRecord,
   PagedResponse,
+  GetReportsSummaryParams,
   ReportsSummary,
   UpsertClientPayload,
   UpsertInvoicePayload,
@@ -42,7 +43,7 @@ type AuthContextValue = {
   state: AuthState;
   login: (payload: LoginPayload) => Promise<void>;
   logout: () => Promise<void>;
-  getReportsSummary: () => Promise<ReportsSummary>;
+  getReportsSummary: (params?: GetReportsSummaryParams) => Promise<ReportsSummary>;
   getCompany: () => Promise<CompanyResponse>;
   updateCompany: (payload: UpdateCompanyPayload) => Promise<CompanyResponse>;
   changePassword: (payload: ChangePasswordPayload) => Promise<void>;
@@ -138,8 +139,8 @@ export function AuthProvider({ children }: PropsWithChildren) {
       await client.logout();
       setState({ status: "unauthenticated" });
     },
-    getReportsSummary: async () => {
-      return client.getReportsSummary();
+    getReportsSummary: async (params) => {
+      return client.getReportsSummary(params);
     },
     getCompany: async () => {
       return client.getCurrentCompany();

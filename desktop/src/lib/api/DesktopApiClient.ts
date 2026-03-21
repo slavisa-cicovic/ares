@@ -17,6 +17,7 @@ import type {
   PaymentSummary,
   RefundRecord,
   PagedResponse,
+  GetReportsSummaryParams,
   ReportsSummary,
   UpsertClientPayload,
   UpsertInvoicePayload,
@@ -101,8 +102,19 @@ export class DesktopApiClient {
     return this.request<AuthenticatedUser>("/auth/me");
   }
 
-  async getReportsSummary(): Promise<ReportsSummary> {
-    return this.request<ReportsSummary>("/reports/summary");
+  async getReportsSummary(params?: GetReportsSummaryParams): Promise<ReportsSummary> {
+    const query = new URLSearchParams();
+
+    if (params?.from) {
+      query.set("from", params.from);
+    }
+
+    if (params?.to) {
+      query.set("to", params.to);
+    }
+
+    const suffix = query.size > 0 ? `?${query.toString()}` : "";
+    return this.request<ReportsSummary>(`/reports/summary${suffix}`);
   }
 
   async getCurrentCompany(): Promise<CompanyResponse> {
