@@ -46,6 +46,7 @@ type AuthContextValue = {
   getReportsSummary: (params?: GetReportsSummaryParams) => Promise<ReportsSummary>;
   getCompany: () => Promise<CompanyResponse>;
   updateCompany: (payload: UpdateCompanyPayload) => Promise<CompanyResponse>;
+  uploadCompanyLogo: (file: File) => Promise<string>;
   changePassword: (payload: ChangePasswordPayload) => Promise<void>;
   getClients: (params: ListClientsParams) => Promise<PagedResponse<ClientSummary>>;
   createClient: (payload: UpsertClientPayload) => Promise<ClientSummary>;
@@ -166,6 +167,9 @@ export function AuthProvider({ children }: PropsWithChildren) {
       }
 
       return updatedCompany;
+    },
+    uploadCompanyLogo: async (file) => {
+      return client.uploadCompanyLogo(file);
     },
     changePassword: async (payload) => {
       await client.changeOwnPassword(payload);

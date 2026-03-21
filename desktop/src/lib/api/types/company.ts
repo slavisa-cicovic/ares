@@ -4,6 +4,9 @@ export type CompanyResponse = {
   pib: string | null;
   mb: string | null;
   address: string | null;
+  postalCode: string | null;
+  city: string | null;
+  country: string | null;
   email: string | null;
   phone: string | null;
   bankAccount: string | null;
@@ -18,10 +21,17 @@ export type UpdateCompanyPayload = {
   pib: string | null;
   mb: string | null;
   address: string | null;
+  postalCode: string | null;
+  city: string | null;
+  country: string | null;
   email: string | null;
   phone: string | null;
   bankAccount: string | null;
   brandColor: string | null;
   logoUrl: string | null;
   themePreset: string;
+};
+
+export type CompanyLogoUploadResponse = {
+  logoUrl: string;
 };

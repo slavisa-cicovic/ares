@@ -14,9 +14,16 @@ import { normalizeDesktopTheme } from "../features/settings/themeStorage";
 import { Shell, type AppView } from "./Shell";
 import { createAppTheme } from "../theme/createAppTheme";
 
+type BrandingPreviewState = {
+  themePreset: string;
+  brandColor: string | null;
+  logoUrl: string | null;
+};
+
 function AppContent() {
   const { state, logout } = useAuth();
   const [activeView, setActiveView] = useState<AppView>("dashboard");
+  const [brandingPreview, setBrandingPreview] = useState<BrandingPreviewState | null>(null);
 
   if (state.status === "bootstrapping") {
     return <div className="screen-state">Restoring session...</div>;
@@ -26,15 +33,15 @@ function AppContent() {
     return <LoginScreen />;
   }
 
-  const themePreset = normalizeDesktopTheme(state.user.companyThemePreset);
-  const muiTheme = createAppTheme(themePreset, state.user.companyBrandColor);
+  const themePreset = normalizeDesktopTheme(brandingPreview?.themePreset ?? state.user.companyThemePreset);
+  const muiTheme = createAppTheme(themePreset, brandingPreview?.brandColor ?? state.user.companyBrandColor);
 
   return (
     <ThemeProvider theme={muiTheme}>
       <CssBaseline />
       <Shell
         activeView={activeView}
-        companyLogoUrl={state.user.companyLogoUrl}
+        companyLogoUrl={brandingPreview?.logoUrl ?? state.user.companyLogoUrl}
         companyName={state.user.companyName}
         onNavigate={setActiveView}
         userEmail={state.user.email}
@@ -42,7 +49,12 @@ function AppContent() {
         onLogout={logout}
       >
         {activeView === "dashboard" ? <DashboardScreen /> : null}
-        {activeView === "settings" ? <SettingsScreen user={state.user} /> : null}
+        {activeView === "settings" ? (
+          <SettingsScreen
+            onBrandingPreviewChange={setBrandingPreview}
+            user={state.user}
+          />
+        ) : null}
         {activeView === "clients" ? <ClientsScreen user={state.user} /> : null}
         {activeView === "items" ? <ItemsScreen user={state.user} /> : null}
         {activeView === "invoices" ? <InvoicesScreen /> : null}

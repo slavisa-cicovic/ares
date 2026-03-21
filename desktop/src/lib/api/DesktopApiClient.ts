@@ -5,6 +5,7 @@ import type {
   CreatePaymentPayload,
   CreateRefundPayload,
   ClientSummary,
+  CompanyLogoUploadResponse,
   CompanyResponse,
   InvoiceDetail,
   InvoiceSummary,
@@ -126,6 +127,18 @@ export class DesktopApiClient {
       method: "PUT",
       body: JSON.stringify(payload)
     });
+  }
+
+  async uploadCompanyLogo(file: File): Promise<string> {
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const response = await this.requestFormData<CompanyLogoUploadResponse>("/company/logo", {
+      method: "POST",
+      body: formData
+    });
+
+    return response.logoUrl;
   }
 
   async changeOwnPassword(payload: ChangePasswordPayload): Promise<void> {
@@ -386,6 +399,34 @@ export class DesktopApiClient {
     }
 
     return response.arrayBuffer();
+  }
+
+  private async requestFormData<T>(path: string, init: RequestInit, retry = true): Promise<T> {
+    const session = this.getSession();
+
+    if (!session) {
+      throw new ApiClientError(401, "Session is missing.");
+    }
+
+    const response = await fetch(this.url(path), {
+      ...init,
+      headers: {
+        ...(init.headers ?? {}),
+        Authorization: `Bearer ${session.accessToken}`
+      }
+    });
+
+    if (response.status === 401 && retry) {
+      const nextSession = await this.refreshSession();
+
+      if (!nextSession) {
+        throw new ApiClientError(401, "Session expired.");
+      }
+
+      return this.requestFormData<T>(path, init, false);
+    }
+
+    return this.parseResponse<T>(response);
   }
 
   private async refreshSession(): Promise<SessionData | null> {

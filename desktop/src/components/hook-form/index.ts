@@ -1,5 +1,6 @@
 export { default as FormProvider } from "./FormProvider";
 export { default as RHFAutocomplete } from "./RHFAutocomplete";
+export { default as RHFColorPicker } from "./RHFColorPicker";
 export { default as RHFCurrencyField } from "./RHFCurrencyField";
 export { default as RHFDatePicker } from "./RHFDatePicker";
 export { default as RHFLogoPicker } from "./RHFLogoPicker";

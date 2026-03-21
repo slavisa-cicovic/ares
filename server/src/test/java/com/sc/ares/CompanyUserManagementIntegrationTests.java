@@ -2,6 +2,7 @@ package com.sc.ares;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -26,6 +27,7 @@ import com.sc.ares.features.refund.repository.CreditNoteRefundRepository;
 import com.sc.ares.features.user.entity.AppUser;
 import com.sc.ares.features.user.entity.UserStatus;
 import com.sc.ares.features.user.repository.UserRepository;
+import java.net.URI;
 import java.util.List;
 import java.util.Map;
 import org.hamcrest.Matchers;
@@ -38,13 +40,17 @@ import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestPropertySource;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
-@TestPropertySource(properties = "spring.jpa.hibernate.ddl-auto=create-drop")
+@TestPropertySource(properties = {
+    "spring.jpa.hibernate.ddl-auto=create-drop",
+    "ares.storage.company-logo-dir=/tmp/ares-company-logo-tests"
+})
 class CompanyUserManagementIntegrationTests {
 
     @Autowired
@@ -132,6 +138,9 @@ class CompanyUserManagementIntegrationTests {
             .andExpect(jsonPath("$.name").value("Alpha Company"))
             .andExpect(jsonPath("$.pib").value(Matchers.nullValue()))
             .andExpect(jsonPath("$.bankAccount").value(Matchers.nullValue()))
+            .andExpect(jsonPath("$.postalCode").value(Matchers.nullValue()))
+            .andExpect(jsonPath("$.city").value(Matchers.nullValue()))
+            .andExpect(jsonPath("$.country").value(Matchers.nullValue()))
             .andExpect(jsonPath("$.brandColor").value(Matchers.nullValue()))
             .andExpect(jsonPath("$.logoUrl").value(Matchers.nullValue()))
             .andExpect(jsonPath("$.themePreset").value("amber"));
@@ -140,17 +149,20 @@ class CompanyUserManagementIntegrationTests {
                 put("/company")
                     .header("Authorization", bearer(token))
                     .contentType(MediaType.APPLICATION_JSON)
-                    .content(objectMapper.writeValueAsString(Map.of(
-                        "name", "Alpha Company Updated",
-                        "pib", "123456789",
-                        "mb", "98765432",
-                        "address", "Main Street 1",
-                        "email", "office@alpha.local",
-                        "phone", "+38160123456",
-                        "bankAccount", "160-123456-78",
-                        "brandColor", "#4B8AB4",
-                        "logoUrl", "https://cdn.local/alpha.png",
-                        "themePreset", "ocean"
+                    .content(objectMapper.writeValueAsString(Map.ofEntries(
+                        Map.entry("name", "Alpha Company Updated"),
+                        Map.entry("pib", "123456789"),
+                        Map.entry("mb", "98765432"),
+                        Map.entry("address", "Main Street 1"),
+                        Map.entry("postalCode", "11000"),
+                        Map.entry("city", "Belgrade"),
+                        Map.entry("country", "Serbia"),
+                        Map.entry("email", "office@alpha.local"),
+                        Map.entry("phone", "+38160123456"),
+                        Map.entry("bankAccount", "160-123456-78"),
+                        Map.entry("brandColor", "#4B8AB4"),
+                        Map.entry("logoUrl", "https://cdn.local/alpha.png"),
+                        Map.entry("themePreset", "ocean")
                     )))
             )
             .andExpect(status().isOk())
@@ -158,6 +170,9 @@ class CompanyUserManagementIntegrationTests {
             .andExpect(jsonPath("$.pib").value("123456789"))
             .andExpect(jsonPath("$.mb").value("98765432"))
             .andExpect(jsonPath("$.address").value("Main Street 1"))
+            .andExpect(jsonPath("$.postalCode").value("11000"))
+            .andExpect(jsonPath("$.city").value("Belgrade"))
+            .andExpect(jsonPath("$.country").value("Serbia"))
             .andExpect(jsonPath("$.email").value("office@alpha.local"))
             .andExpect(jsonPath("$.phone").value("+38160123456"))
             .andExpect(jsonPath("$.bankAccount").value("160-123456-78"))
@@ -174,24 +189,30 @@ class CompanyUserManagementIntegrationTests {
                 put("/company")
                     .header("Authorization", bearer(token))
                     .contentType(MediaType.APPLICATION_JSON)
-                    .content(objectMapper.writeValueAsString(Map.of(
-                        "name", "  Alpha Company Updated  ",
-                        "pib", "   ",
-                        "mb", "",
-                        "address", "  Address  ",
-                        "email", "  office@alpha.local  ",
-                        "phone", "  +38160123456  ",
-                        "bankAccount", "   ",
-                        "brandColor", "  #B7844F  ",
-                        "logoUrl", "  https://cdn.local/logo.png  ",
-                        "themePreset", "graphite"
+                    .content(objectMapper.writeValueAsString(Map.ofEntries(
+                        Map.entry("name", "  Alpha Company Updated  "),
+                        Map.entry("pib", "  123456789  "),
+                        Map.entry("mb", "  98765432  "),
+                        Map.entry("address", "  Address  "),
+                        Map.entry("postalCode", "  11000  "),
+                        Map.entry("city", "  Belgrade  "),
+                        Map.entry("country", "  Serbia  "),
+                        Map.entry("email", "  office@alpha.local  "),
+                        Map.entry("phone", "  +38160123456  "),
+                        Map.entry("bankAccount", "   "),
+                        Map.entry("brandColor", "  #B7844F  "),
+                        Map.entry("logoUrl", "  https://cdn.local/logo.png  "),
+                        Map.entry("themePreset", "graphite")
                     )))
             )
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.name").value("Alpha Company Updated"))
-            .andExpect(jsonPath("$.pib").value(Matchers.nullValue()))
-            .andExpect(jsonPath("$.mb").value(Matchers.nullValue()))
+            .andExpect(jsonPath("$.pib").value("123456789"))
+            .andExpect(jsonPath("$.mb").value("98765432"))
             .andExpect(jsonPath("$.address").value("Address"))
+            .andExpect(jsonPath("$.postalCode").value("11000"))
+            .andExpect(jsonPath("$.city").value("Belgrade"))
+            .andExpect(jsonPath("$.country").value("Serbia"))
             .andExpect(jsonPath("$.email").value("office@alpha.local"))
             .andExpect(jsonPath("$.phone").value("+38160123456"))
             .andExpect(jsonPath("$.bankAccount").value(Matchers.nullValue()))
@@ -199,6 +220,38 @@ class CompanyUserManagementIntegrationTests {
             .andExpect(jsonPath("$.logoUrl").value("https://cdn.local/logo.png"))
             .andExpect(jsonPath("$.themePreset").value("graphite"));
 
+    }
+
+    @Test
+    void companyAdminShouldUploadCompanyLogo() throws Exception {
+        String token = login("admin.one@local.ares", "ares-test").get("accessToken").asText();
+        MockMultipartFile file = new MockMultipartFile(
+            "file",
+            "alpha-logo.png",
+            MediaType.IMAGE_PNG_VALUE,
+            new byte[] { (byte) 0x89, 0x50, 0x4E, 0x47 }
+        );
+
+        MvcResult uploadResult = mockMvc.perform(
+                multipart("/company/logo")
+                    .file(file)
+                    .header("Authorization", bearer(token))
+            )
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.logoUrl").value(Matchers.containsString("/api/company/logo/")))
+            .andReturn();
+
+        String logoUrl = objectMapper.readTree(uploadResult.getResponse().getContentAsString())
+            .get("logoUrl")
+            .asText();
+        String logoPath = URI.create(logoUrl).getPath().replaceFirst("^/api", "");
+
+        mockMvc.perform(get(logoPath))
+            .andExpect(status().isOk())
+            .andExpect(result -> org.hamcrest.MatcherAssert.assertThat(
+                result.getResponse().getContentType(),
+                Matchers.startsWith(MediaType.IMAGE_PNG_VALUE)
+            ));
     }
 
     @Test
@@ -211,11 +264,79 @@ class CompanyUserManagementIntegrationTests {
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(objectMapper.writeValueAsString(Map.of(
                         "name", "Alpha Company Updated",
+                        "pib", "123456789",
+                        "mb", "98765432",
                         "brandColor", "blue"
                     )))
             )
             .andExpect(status().isBadRequest())
             .andExpect(jsonPath("$.message").value("Invalid brand color."));
+    }
+
+    @Test
+    void companyAdminShouldRejectMissingPibAndMb() throws Exception {
+        String token = login("admin.one@local.ares", "ares-test").get("accessToken").asText();
+
+        mockMvc.perform(
+                put("/company")
+                    .header("Authorization", bearer(token))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(Map.of(
+                        "name", "Alpha Company Updated",
+                        "pib", "   ",
+                        "mb", ""
+                    )))
+            )
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.message").value("PIB is required."));
+    }
+
+    @Test
+    void companyAdminShouldRejectDuplicatePibAndMb() throws Exception {
+        String token = login("admin.one@local.ares", "ares-test").get("accessToken").asText();
+
+        companyTwo.updateProfile(
+            "Beta Company",
+            "123456789",
+            "98765432",
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            com.sc.ares.features.company.entity.CompanyThemePreset.AMBER
+        );
+        companyRepository.save(companyTwo);
+
+        mockMvc.perform(
+                put("/company")
+                    .header("Authorization", bearer(token))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(Map.of(
+                        "name", "Alpha Company Updated",
+                        "pib", "123456789",
+                        "mb", "55555555"
+                    )))
+            )
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.message").value("PIB must be unique."));
+
+        mockMvc.perform(
+                put("/company")
+                    .header("Authorization", bearer(token))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(Map.of(
+                        "name", "Alpha Company Updated",
+                        "pib", "111111111",
+                        "mb", "98765432"
+                    )))
+            )
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.message").value("MB must be unique."));
     }
 
     @Test

@@ -31,6 +31,15 @@ public class Company {
     @Column(length = 255)
     private String address;
 
+    @Column(name = "postal_code", length = 32)
+    private String postalCode;
+
+    @Column(length = 128)
+    private String city;
+
+    @Column(length = 128)
+    private String country;
+
     @Column(length = 320)
     private String email;
 
@@ -99,6 +108,18 @@ public class Company {
         return address;
     }
 
+    public String getPostalCode() {
+        return postalCode;
+    }
+
+    public String getCity() {
+        return city;
+    }
+
+    public String getCountry() {
+        return country;
+    }
+
     public String getEmail() {
         return email;
     }
@@ -146,6 +167,9 @@ public class Company {
         String pib,
         String mb,
         String address,
+        String postalCode,
+        String city,
+        String country,
         String email,
         String phone,
         String bankAccount,
@@ -157,6 +181,9 @@ public class Company {
         this.pib = pib;
         this.mb = mb;
         this.address = address;
+        this.postalCode = postalCode;
+        this.city = city;
+        this.country = country;
         this.email = email;
         this.phone = phone;
         this.bankAccount = bankAccount;

@@ -6,6 +6,8 @@ import com.sc.ares.features.company.dto.UpdateCompanyRequest;
 import com.sc.ares.features.company.entity.Company;
 import com.sc.ares.features.company.entity.CompanyThemePreset;
 import com.sc.ares.features.company.repository.CompanyRepository;
+import java.util.UUID;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,13 +19,16 @@ public class CompanyManagementService {
 
     private final CompanyAdminAccessService companyAdminAccessService;
     private final CompanyRepository companyRepository;
+    private final CompanyLogoStorageService companyLogoStorageService;
 
     public CompanyManagementService(
         CompanyAdminAccessService companyAdminAccessService,
-        CompanyRepository companyRepository
+        CompanyRepository companyRepository,
+        CompanyLogoStorageService companyLogoStorageService
     ) {
         this.companyAdminAccessService = companyAdminAccessService;
         this.companyRepository = companyRepository;
+        this.companyLogoStorageService = companyLogoStorageService;
     }
 
     @Transactional(readOnly = true)
@@ -36,9 +41,12 @@ public class CompanyManagementService {
         Company company = companyAdminAccessService.getRequiredManagedCompany();
         company.updateProfile(
             normalizeRequired(request.name()),
-            normalizeOptional(request.pib()),
-            normalizeOptional(request.mb()),
+            normalizeRequired(request.pib(), "PIB is required."),
+            normalizeRequired(request.mb(), "MB is required."),
             normalizeOptional(request.address()),
+            normalizeOptional(request.postalCode()),
+            normalizeOptional(request.city()),
+            normalizeOptional(request.country()),
             normalizeOptionalEmail(request.email()),
             normalizeOptional(request.phone()),
             normalizeOptional(request.bankAccount()),
@@ -46,9 +54,16 @@ public class CompanyManagementService {
             normalizeOptional(request.logoUrl()),
             normalizeThemePreset(request.themePreset())
         );
+        ensureUniqueCompanyIdentifiers(company);
         companyRepository.save(company);
 
         return toResponse(company);
+    }
+
+    @Transactional(readOnly = true)
+    public String storeCurrentCompanyLogo(MultipartFile file) {
+        UUID companyId = companyAdminAccessService.getRequiredManagedCompany().getId();
+        return companyLogoStorageService.storeLogo(companyId, file);
     }
 
     private CompanyResponse toResponse(Company company) {
@@ -58,6 +73,9 @@ public class CompanyManagementService {
             company.getPib(),
             company.getMb(),
             company.getAddress(),
+            company.getPostalCode(),
+            company.getCity(),
+            company.getCountry(),
             company.getEmail(),
             company.getPhone(),
             company.getBankAccount(),
@@ -68,11 +86,25 @@ public class CompanyManagementService {
         );
     }
 
+    private void ensureUniqueCompanyIdentifiers(Company company) {
+        if (companyRepository.existsByPibAndDeletedAtIsNullAndIdNot(company.getPib(), company.getId())) {
+            throw new ApiBadRequestException("PIB must be unique.");
+        }
+
+        if (companyRepository.existsByMbAndDeletedAtIsNullAndIdNot(company.getMb(), company.getId())) {
+            throw new ApiBadRequestException("MB must be unique.");
+        }
+    }
+
     private String normalizeRequired(String value) {
+        return normalizeRequired(value, "Required company field is missing.");
+    }
+
+    private String normalizeRequired(String value, String errorMessage) {
         String normalized = normalizeOptional(value);
 
         if (normalized == null) {
-            throw new ApiBadRequestException("Required company field is missing.");
+            throw new ApiBadRequestException(errorMessage);
         }
 
         return normalized;

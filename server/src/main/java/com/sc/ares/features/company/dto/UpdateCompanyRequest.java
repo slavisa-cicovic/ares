@@ -13,6 +13,12 @@ public record UpdateCompanyRequest(
     String mb,
     @Size(max = 255)
     String address,
+    @Size(max = 32)
+    String postalCode,
+    @Size(max = 128)
+    String city,
+    @Size(max = 128)
+    String country,
     @Size(max = 320)
     String email,
     @Size(max = 64)

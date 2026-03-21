@@ -10,4 +10,8 @@ public interface CompanyRepository extends JpaRepository<Company, UUID> {
     Optional<Company> findByNameAndDeletedAtIsNull(String name);
 
     Optional<Company> findByIdAndDeletedAtIsNull(UUID id);
+
+    boolean existsByPibAndDeletedAtIsNullAndIdNot(String pib, UUID id);
+
+    boolean existsByMbAndDeletedAtIsNullAndIdNot(String mb, UUID id);
 }
