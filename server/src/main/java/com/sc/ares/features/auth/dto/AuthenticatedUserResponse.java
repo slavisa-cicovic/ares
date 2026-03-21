@@ -8,6 +8,8 @@ public record AuthenticatedUserResponse(
     String email,
     String firstName,
     String lastName,
+    String phone,
+    String userLogoUrl,
     UUID companyId,
     String companyName,
     String companyBrandColor,

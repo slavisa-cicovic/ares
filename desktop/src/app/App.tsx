@@ -45,6 +45,7 @@ function AppContent() {
         companyName={state.user.companyName}
         onNavigate={setActiveView}
         userEmail={state.user.email}
+        userLogoUrl={state.user.userLogoUrl}
         userName={`${state.user.firstName} ${state.user.lastName}`}
         onLogout={logout}
       >

@@ -57,6 +57,7 @@ public class SecurityConfig {
                 .requestMatchers("/auth/refresh").permitAll()
                 .requestMatchers("/auth/logout").permitAll()
                 .requestMatchers("/company/logo/*").permitAll()
+                .requestMatchers("/users/logo/*").permitAll()
                 .anyRequest().authenticated()
             );
 

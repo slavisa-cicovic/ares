@@ -18,6 +18,8 @@ public class AuthResponseFactory {
             principal.email(),
             userDetails.getFirstName(),
             userDetails.getLastName(),
+            userDetails.getPhone(),
+            userDetails.getProfileImageUrl(),
             principal.companyId(),
             userDetails.getCompanyName(),
             userDetails.getCompanyBrandColor(),

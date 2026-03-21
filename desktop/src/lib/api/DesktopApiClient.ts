@@ -23,7 +23,10 @@ import type {
   UpsertClientPayload,
   UpsertInvoicePayload,
   UpsertItemPayload,
-  UpdateCompanyPayload
+  UpdateCompanyPayload,
+  UpdateOwnProfilePayload,
+  UserLogoUploadResponse,
+  UserProfileResponse
 } from "./types";
 
 type SessionGetter = () => SessionData | null;
@@ -141,9 +144,28 @@ export class DesktopApiClient {
     return response.logoUrl;
   }
 
+  async uploadUserLogo(file: File): Promise<string> {
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const response = await this.requestFormData<UserLogoUploadResponse>("/users/me/logo", {
+      method: "POST",
+      body: formData
+    });
+
+    return response.logoUrl;
+  }
+
   async changeOwnPassword(payload: ChangePasswordPayload): Promise<void> {
     await this.request<void>("/users/me/change-password", {
       method: "POST",
+      body: JSON.stringify(payload)
+    });
+  }
+
+  async updateOwnProfile(payload: UpdateOwnProfilePayload): Promise<UserProfileResponse> {
+    return this.request<UserProfileResponse>("/users/me", {
+      method: "PUT",
       body: JSON.stringify(payload)
     });
   }

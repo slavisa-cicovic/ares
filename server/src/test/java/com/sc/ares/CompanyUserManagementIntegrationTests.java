@@ -49,7 +49,7 @@ import org.springframework.test.web.servlet.MvcResult;
 @ActiveProfiles("test")
 @TestPropertySource(properties = {
     "spring.jpa.hibernate.ddl-auto=create-drop",
-    "ares.storage.company-logo-dir=/tmp/ares-company-logo-tests"
+    "ares.storage.base-dir=/tmp/ares-company-logo-tests"
 })
 class CompanyUserManagementIntegrationTests {
 
@@ -386,6 +386,63 @@ class CompanyUserManagementIntegrationTests {
             .andExpect(status().isCreated())
             .andExpect(jsonPath("$.email").value("new.user@local.ares"))
             .andExpect(jsonPath("$.roles[0]").value("user"));
+    }
+
+    @Test
+    void authenticatedUserShouldUpdateOwnProfile() throws Exception {
+        String token = login("user.one@local.ares", "ares-test").get("accessToken").asText();
+
+        mockMvc.perform(
+                put("/users/me")
+                    .header("Authorization", bearer(token))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(Map.of(
+                        "email", "user.one.updated@local.ares",
+                        "firstName", "Mila",
+                        "lastName", "Nikolic",
+                        "phone", "+38160111222",
+                        "userLogoUrl", "https://cdn.local/user-one.png"
+                    )))
+            )
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.email").value("user.one.updated@local.ares"))
+            .andExpect(jsonPath("$.firstName").value("Mila"))
+            .andExpect(jsonPath("$.lastName").value("Nikolic"))
+            .andExpect(jsonPath("$.phone").value("+38160111222"))
+            .andExpect(jsonPath("$.userLogoUrl").value("https://cdn.local/user-one.png"))
+            .andExpect(jsonPath("$.roles[0]").value("user"));
+    }
+
+    @Test
+    void authenticatedUserShouldUploadOwnLogo() throws Exception {
+        String token = login("user.one@local.ares", "ares-test").get("accessToken").asText();
+        MockMultipartFile file = new MockMultipartFile(
+            "file",
+            "user-logo.png",
+            MediaType.IMAGE_PNG_VALUE,
+            new byte[] { (byte) 0x89, 0x50, 0x4E, 0x47 }
+        );
+
+        MvcResult uploadResult = mockMvc.perform(
+                multipart("/users/me/logo")
+                    .file(file)
+                    .header("Authorization", bearer(token))
+            )
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.logoUrl").value(Matchers.containsString("/api/users/logo/")))
+            .andReturn();
+
+        String logoUrl = objectMapper.readTree(uploadResult.getResponse().getContentAsString())
+            .get("logoUrl")
+            .asText();
+        String logoPath = URI.create(logoUrl).getPath().replaceFirst("^/api", "");
+
+        mockMvc.perform(get(logoPath))
+            .andExpect(status().isOk())
+            .andExpect(result -> org.hamcrest.MatcherAssert.assertThat(
+                result.getResponse().getContentType(),
+                Matchers.startsWith(MediaType.IMAGE_PNG_VALUE)
+            ));
     }
 
     @Test

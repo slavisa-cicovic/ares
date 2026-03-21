@@ -62,6 +62,8 @@ public class DatabaseUserDetailsService implements UserDetailsService {
             user.getPasswordHash(),
             user.getFirstName(),
             user.getLastName(),
+            user.getPhone(),
+            user.getProfileImageUrl(),
             user.getCompany().getName(),
             user.getCompany().getBrandColor(),
             user.getCompany().getLogoUrl(),

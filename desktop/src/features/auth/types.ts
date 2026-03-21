@@ -3,6 +3,8 @@ export type AuthenticatedUser = {
   email: string;
   firstName: string;
   lastName: string;
+  phone: string | null;
+  userLogoUrl: string | null;
   companyId: string;
   companyName: string;
   companyBrandColor: string | null;

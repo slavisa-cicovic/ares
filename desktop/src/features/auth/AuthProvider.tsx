@@ -31,7 +31,8 @@ import type {
   UpsertClientPayload,
   UpsertInvoicePayload,
   UpsertItemPayload,
-  UpdateCompanyPayload
+  UpdateCompanyPayload,
+  UpdateOwnProfilePayload
 } from "../../lib/api/types";
 
 type AuthState =
@@ -47,6 +48,8 @@ type AuthContextValue = {
   getCompany: () => Promise<CompanyResponse>;
   updateCompany: (payload: UpdateCompanyPayload) => Promise<CompanyResponse>;
   uploadCompanyLogo: (file: File) => Promise<string>;
+  uploadUserLogo: (file: File) => Promise<string>;
+  updateOwnProfile: (payload: UpdateOwnProfilePayload) => Promise<void>;
   changePassword: (payload: ChangePasswordPayload) => Promise<void>;
   getClients: (params: ListClientsParams) => Promise<PagedResponse<ClientSummary>>;
   createClient: (payload: UpsertClientPayload) => Promise<ClientSummary>;
@@ -170,6 +173,30 @@ export function AuthProvider({ children }: PropsWithChildren) {
     },
     uploadCompanyLogo: async (file) => {
       return client.uploadCompanyLogo(file);
+    },
+    uploadUserLogo: async (file) => {
+      return client.uploadUserLogo(file);
+    },
+    updateOwnProfile: async (payload) => {
+      const updatedProfile = await client.updateOwnProfile(payload);
+      const currentSession = loadSession();
+
+      if (currentSession) {
+        const nextSession = {
+          ...currentSession,
+          user: {
+            ...currentSession.user,
+            email: updatedProfile.email,
+            firstName: updatedProfile.firstName,
+            lastName: updatedProfile.lastName,
+            phone: updatedProfile.phone,
+            userLogoUrl: updatedProfile.userLogoUrl
+          }
+        };
+
+        setStoredSession(nextSession);
+        setState({ status: "authenticated", user: nextSession.user });
+      }
     },
     changePassword: async (payload) => {
       await client.changeOwnPassword(payload);

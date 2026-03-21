@@ -30,11 +30,12 @@ public class CompanyLogoStorageService {
     private final Path storageDirectory;
 
     public CompanyLogoStorageService(
-        @Value("${ares.storage.company-logo-dir:}") String configuredStorageDirectory
+        @Value("${ares.storage.base-dir:}") String configuredStorageDirectory
     ) {
-        this.storageDirectory = configuredStorageDirectory == null || configuredStorageDirectory.isBlank()
-            ? Path.of(System.getProperty("java.io.tmpdir"), "ares", "company-logos")
+        Path baseDirectory = configuredStorageDirectory == null || configuredStorageDirectory.isBlank()
+            ? Path.of(System.getProperty("java.io.tmpdir"), "ares")
             : Path.of(configuredStorageDirectory);
+        this.storageDirectory = baseDirectory.resolve("company-logos");
     }
 
     public String storeLogo(UUID companyId, MultipartFile file) {

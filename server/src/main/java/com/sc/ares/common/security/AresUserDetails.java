@@ -11,6 +11,8 @@ public class AresUserDetails implements UserDetails {
     private final String passwordHash;
     private final String firstName;
     private final String lastName;
+    private final String phone;
+    private final String profileImageUrl;
     private final String companyName;
     private final String companyBrandColor;
     private final String companyLogoUrl;
@@ -23,6 +25,8 @@ public class AresUserDetails implements UserDetails {
         String passwordHash,
         String firstName,
         String lastName,
+        String phone,
+        String profileImageUrl,
         String companyName,
         String companyBrandColor,
         String companyLogoUrl,
@@ -34,6 +38,8 @@ public class AresUserDetails implements UserDetails {
         this.passwordHash = passwordHash;
         this.firstName = firstName;
         this.lastName = lastName;
+        this.phone = phone;
+        this.profileImageUrl = profileImageUrl;
         this.companyName = companyName;
         this.companyBrandColor = companyBrandColor;
         this.companyLogoUrl = companyLogoUrl;
@@ -52,6 +58,14 @@ public class AresUserDetails implements UserDetails {
 
     public String getLastName() {
         return lastName;
+    }
+
+    public String getPhone() {
+        return phone;
+    }
+
+    public String getProfileImageUrl() {
+        return profileImageUrl;
     }
 
     public String getCompanyName() {

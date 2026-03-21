@@ -39,6 +39,12 @@ public class AppUser {
     @Column(name = "last_name", nullable = false, length = 100)
     private String lastName;
 
+    @Column(length = 64)
+    private String phone;
+
+    @Column(name = "profile_image_url", length = 512)
+    private String profileImageUrl;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 32)
     private UserStatus status;
@@ -102,6 +108,14 @@ public class AppUser {
         return lastName;
     }
 
+    public String getPhone() {
+        return phone;
+    }
+
+    public String getProfileImageUrl() {
+        return profileImageUrl;
+    }
+
     public UserStatus getStatus() {
         return status;
     }
@@ -134,6 +148,21 @@ public class AppUser {
 
     public void updatePasswordHash(String passwordHash) {
         this.passwordHash = passwordHash;
+        this.updatedAt = Instant.now();
+    }
+
+    public void updateOwnProfile(
+        String email,
+        String firstName,
+        String lastName,
+        String phone,
+        String profileImageUrl
+    ) {
+        this.email = email;
+        this.firstName = firstName;
+        this.lastName = lastName;
+        this.phone = phone;
+        this.profileImageUrl = profileImageUrl;
         this.updatedAt = Instant.now();
     }
 

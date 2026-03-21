@@ -28,6 +28,7 @@ type ShellProps = PropsWithChildren<{
   companyLogoUrl: string | null;
   userName: string;
   userEmail: string;
+  userLogoUrl: string | null;
   activeView: AppView;
   onNavigate: (view: AppView) => void;
   onLogout: () => Promise<void>;
@@ -50,6 +51,7 @@ export function Shell({
   companyLogoUrl,
   userName,
   userEmail,
+  userLogoUrl,
   activeView,
   onNavigate,
   onLogout,
@@ -130,15 +132,21 @@ export function Shell({
               variant="outlined"
             >
               <Stack alignItems="flex-start" direction="row" justifyContent="space-between" spacing={2}>
-                <Box>
-                  <Typography color="primary.main" variant="overline">
-                    Signed In
-                  </Typography>
-                  <Typography variant="subtitle1">{userName}</Typography>
-                  <Typography color="text.secondary" variant="body2">
-                    {userEmail}
-                  </Typography>
-                </Box>
+                <Stack alignItems="center" direction="row" spacing={1.5}>
+                  <Avatar src={userLogoUrl ?? undefined} sx={{ width: 44, height: 44 }}>
+                    {userName.charAt(0).toUpperCase()}
+                  </Avatar>
+
+                  <Box>
+                    <Typography color="primary.main" variant="overline">
+                      Signed In
+                    </Typography>
+                    <Typography variant="subtitle1">{userName}</Typography>
+                    <Typography color="text.secondary" variant="body2">
+                      {userEmail}
+                    </Typography>
+                  </Box>
+                </Stack>
 
                 <Button onClick={() => void onLogout()} variant="outlined">
                   Logout

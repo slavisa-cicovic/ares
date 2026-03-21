@@ -1,5 +1,7 @@
-import type { HTMLInputTypeAttribute } from "react";
-import { TextField } from "@mui/material";
+import { useState, type HTMLInputTypeAttribute } from "react";
+import VisibilityOffRoundedIcon from "@mui/icons-material/VisibilityOffRounded";
+import VisibilityRoundedIcon from "@mui/icons-material/VisibilityRounded";
+import { IconButton, InputAdornment, TextField, type TextFieldProps } from "@mui/material";
 import { Controller, useFormContext } from "react-hook-form";
 
 type RHFTextFieldProps = {
@@ -13,6 +15,7 @@ type RHFTextFieldProps = {
   maxLength?: number;
   multiline?: boolean;
   rows?: number;
+  size?: TextFieldProps["size"];
   className?: string;
 };
 
@@ -27,9 +30,12 @@ export default function RHFTextField({
   maxLength,
   multiline = false,
   rows = 3,
+  size,
   className
 }: RHFTextFieldProps) {
   const { control } = useFormContext();
+  const [isPasswordVisible, setIsPasswordVisible] = useState(false);
+  const isPasswordField = type === "password";
 
   return (
     <Controller
@@ -54,8 +60,29 @@ export default function RHFTextField({
             placeholder={placeholder}
             required={required}
             rows={multiline ? rows : undefined}
-            slotProps={{ htmlInput: { maxLength } }}
-            type={type}
+            size={size}
+            slotProps={{
+              htmlInput: { maxLength },
+              input: isPasswordField
+                ? {
+                    endAdornment: (
+                      <InputAdornment position="end">
+                        <IconButton
+                          aria-label={isPasswordVisible ? "Hide password" : "Show password"}
+                          edge="end"
+                          onClick={() => setIsPasswordVisible((current) => !current)}
+                          onMouseDown={(event) => event.preventDefault()}
+                          size="small"
+                          tabIndex={-1}
+                        >
+                          {isPasswordVisible ? <VisibilityOffRoundedIcon fontSize="small" /> : <VisibilityRoundedIcon fontSize="small" />}
+                        </IconButton>
+                      </InputAdornment>
+                    )
+                  }
+                : undefined
+            }}
+            type={isPasswordField && isPasswordVisible ? "text" : type}
             value={normalizedValue}
             variant="outlined"
           />

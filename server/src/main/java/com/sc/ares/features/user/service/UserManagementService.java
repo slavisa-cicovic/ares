@@ -14,6 +14,8 @@ import com.sc.ares.features.company.entity.Company;
 import com.sc.ares.features.company.service.CompanyAdminAccessService;
 import com.sc.ares.features.user.dto.ChangePasswordRequest;
 import com.sc.ares.features.user.dto.CreateUserRequest;
+import com.sc.ares.features.user.dto.OwnProfileResponse;
+import com.sc.ares.features.user.dto.UpdateOwnProfileRequest;
 import com.sc.ares.features.user.dto.UpdateUserRequest;
 import com.sc.ares.features.user.dto.UserResponse;
 import com.sc.ares.features.user.entity.AppUser;
@@ -55,6 +57,7 @@ public class UserManagementService {
     private final RoleRepository roleRepository;
     private final UserRoleRepository userRoleRepository;
     private final PasswordEncoder passwordEncoder;
+    private final UserLogoStorageService userLogoStorageService;
 
     public UserManagementService(
         CompanyAdminAccessService companyAdminAccessService,
@@ -62,7 +65,8 @@ public class UserManagementService {
         UserRepository userRepository,
         RoleRepository roleRepository,
         UserRoleRepository userRoleRepository,
-        PasswordEncoder passwordEncoder
+        PasswordEncoder passwordEncoder,
+        UserLogoStorageService userLogoStorageService
     ) {
         this.companyAdminAccessService = companyAdminAccessService;
         this.currentPrincipalService = currentPrincipalService;
@@ -70,6 +74,7 @@ public class UserManagementService {
         this.roleRepository = roleRepository;
         this.userRoleRepository = userRoleRepository;
         this.passwordEncoder = passwordEncoder;
+        this.userLogoStorageService = userLogoStorageService;
     }
 
     @Transactional(readOnly = true)
@@ -211,6 +216,45 @@ public class UserManagementService {
         userRepository.save(user);
     }
 
+    @Transactional
+    public OwnProfileResponse updateOwnProfile(UpdateOwnProfileRequest request) {
+        UUID userId = currentPrincipalService.getRequiredPrincipal().userId();
+        AppUser user = userRepository.findByIdAndDeletedAtIsNull(userId)
+            .orElseThrow(() -> new ResourceNotFoundException("User not found."));
+
+        ensureEmailAvailableForUpdate(userId, request.email());
+
+        user.updateOwnProfile(
+            request.email().trim(),
+            request.firstName().trim(),
+            request.lastName().trim(),
+            normalizeOptional(request.phone()),
+            normalizeOptional(request.userLogoUrl())
+        );
+
+        AppUser savedUser = userRepository.save(user);
+        List<String> roleCodes = loadRoleCodes(List.of(savedUser)).getOrDefault(savedUser.getId(), List.of());
+
+        return new OwnProfileResponse(
+            savedUser.getId(),
+            savedUser.getEmail(),
+            savedUser.getFirstName(),
+            savedUser.getLastName(),
+            savedUser.getPhone(),
+            savedUser.getProfileImageUrl(),
+            savedUser.getStatus().name(),
+            roleCodes
+        );
+    }
+
+    @Transactional
+    public String storeOwnLogo(org.springframework.web.multipart.MultipartFile file) {
+        AppUser user = userRepository.findByIdAndDeletedAtIsNull(currentPrincipalService.getRequiredPrincipal().userId())
+            .orElseThrow(() -> new ResourceNotFoundException("User not found."));
+
+        return userLogoStorageService.storeLogo(user.getId(), file);
+    }
+
     private AppUser getRequiredTenantUser(UUID userId, UUID companyId) {
         return userRepository.findByIdAndCompanyIdAndDeletedAtIsNull(userId, companyId)
             .orElseThrow(() -> new ResourceNotFoundException("User not found."));
@@ -226,6 +270,15 @@ public class UserManagementService {
         if (userRepository.existsByEmailIgnoreCaseAndDeletedAtIsNullAndIdNot(email.trim(), userId)) {
             throw new BusinessConflictException("User email already exists.");
         }
+    }
+
+    private String normalizeOptional(String value) {
+        if (value == null) {
+            return null;
+        }
+
+        String trimmed = value.trim();
+        return trimmed.isBlank() ? null : trimmed;
     }
 
     private List<Role> resolveAssignableRoles(List<String> requestedRoleCodes) {
