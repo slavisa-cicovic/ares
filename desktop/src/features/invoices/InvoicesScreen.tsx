@@ -24,7 +24,14 @@ import {
   TextField,
   Typography
 } from "@mui/material";
-import { ConfirmDialog, DateRangeFilter, FiltersResult, type FilterItem } from "../../components";
+import {
+  ConfirmDialog,
+  DateRangeFilter,
+  FiltersResult,
+  formatDateRangePresetLabel,
+  type DateRangePreset,
+  type FilterItem
+} from "../../components";
 import { emptyRows, useTable } from "../../components/table";
 import { ApiClientError } from "../../lib/api/DesktopApiClient";
 import type {
@@ -129,6 +136,7 @@ export function InvoicesScreen() {
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<"" | InvoiceStatus>("");
   const [paymentStatus, setPaymentStatus] = useState<"" | InvoicePaymentStatus>("");
+  const [dateRangePreset, setDateRangePreset] = useState<DateRangePreset | null>(null);
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [reloadKey, setReloadKey] = useState(0);
@@ -189,7 +197,21 @@ export function InvoicesScreen() {
           }
         ]
       : []),
-    ...(from
+    ...(dateRangePreset !== null && dateRangePreset !== "custom" && from && to
+      ? [
+          {
+            label: "Range",
+            value: formatDateRangePresetLabel(dateRangePreset),
+            onRemove: () => {
+              setDateRangePreset(null);
+              setFrom("");
+              setTo("");
+              table.onResetPage();
+            }
+          }
+        ]
+      : []),
+    ...(dateRangePreset === "custom" && from
       ? [
           {
             label: "From",
@@ -201,7 +223,7 @@ export function InvoicesScreen() {
           }
         ]
       : []),
-    ...(to
+    ...(dateRangePreset === "custom" && to
       ? [
           {
             label: "To",
@@ -350,10 +372,15 @@ export function InvoicesScreen() {
                   setFrom(value);
                   table.onResetPage();
                 }}
+                onPresetChange={(value) => {
+                  setDateRangePreset(value);
+                  table.onResetPage();
+                }}
                 onToChange={(value) => {
                   setTo(value);
                   table.onResetPage();
                 }}
+                preset={dateRangePreset}
                 to={to}
               />
             </Stack>
@@ -384,6 +411,7 @@ export function InvoicesScreen() {
               setSearch("");
               setStatus("");
               setPaymentStatus("");
+              setDateRangePreset(null);
               setFrom("");
               setTo("");
               table.onResetPage();

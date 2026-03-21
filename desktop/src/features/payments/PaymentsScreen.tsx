@@ -18,7 +18,13 @@ import {
   TextField,
   Typography
 } from "@mui/material";
-import { DateRangeFilter, FiltersResult, type FilterItem } from "../../components";
+import {
+  DateRangeFilter,
+  FiltersResult,
+  formatDateRangePresetLabel,
+  type DateRangePreset,
+  type FilterItem
+} from "../../components";
 import { emptyRows, useTable } from "../../components/table";
 import { ApiClientError } from "../../lib/api/DesktopApiClient";
 import type { PagedResponse, PaymentSummary } from "../../lib/api/types";
@@ -73,6 +79,7 @@ export function PaymentsScreen() {
     defaultRowsPerPage: 10
   });
   const [search, setSearch] = useState("");
+  const [dateRangePreset, setDateRangePreset] = useState<DateRangePreset | null>(null);
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [reloadKey, setReloadKey] = useState(0);
@@ -97,7 +104,19 @@ export function PaymentsScreen() {
           }
         }]
       : []),
-    ...(from
+    ...(dateRangePreset !== null && dateRangePreset !== "custom" && from && to
+      ? [{
+          label: "Range",
+          value: formatDateRangePresetLabel(dateRangePreset),
+          onRemove: () => {
+            setDateRangePreset(null);
+            setFrom("");
+            setTo("");
+            table.onResetPage();
+          }
+        }]
+      : []),
+    ...(dateRangePreset === "custom" && from
       ? [{
           label: "From",
           value: formatDate(from),
@@ -107,7 +126,7 @@ export function PaymentsScreen() {
           }
         }]
       : []),
-    ...(to
+    ...(dateRangePreset === "custom" && to
       ? [{
           label: "To",
           value: formatDate(to),
@@ -212,10 +231,15 @@ export function PaymentsScreen() {
                   setFrom(value);
                   table.onResetPage();
                 }}
+                onPresetChange={(value) => {
+                  setDateRangePreset(value);
+                  table.onResetPage();
+                }}
                 onToChange={(value) => {
                   setTo(value);
                   table.onResetPage();
                 }}
+                preset={dateRangePreset}
                 to={to}
               />
             </Stack>
@@ -229,6 +253,7 @@ export function PaymentsScreen() {
             filters={filters}
             onReset={() => {
               setSearch("");
+              setDateRangePreset(null);
               setFrom("");
               setTo("");
               table.onResetPage();
