@@ -3,10 +3,14 @@ import type {
   ApiErrorPayload,
   ChangePasswordPayload,
   CreatePaymentPayload,
+  CreatePlatformCompanyPayload,
+  CreatePlatformUserPayload,
   CreateRefundPayload,
   ClientSummary,
   CompanyLogoUploadResponse,
   CompanyResponse,
+  CompanySummary,
+  CreatedPlatformUserResponse,
   InvoiceDetail,
   InvoiceSummary,
   ItemSummary,
@@ -20,6 +24,7 @@ import type {
   PagedResponse,
   GetReportsSummaryParams,
   ReportsSummary,
+  UserSummary,
   UpsertClientPayload,
   UpsertInvoicePayload,
   UpsertItemPayload,
@@ -123,6 +128,63 @@ export class DesktopApiClient {
 
   async getCurrentCompany(): Promise<CompanyResponse> {
     return this.request<CompanyResponse>("/company");
+  }
+
+  async listPlatformCompanies(params: {
+    page: number;
+    size: number;
+    sort: string;
+    search?: string;
+  }): Promise<PagedResponse<CompanySummary>> {
+    const query = new URLSearchParams({
+      page: String(params.page),
+      size: String(params.size),
+      sort: params.sort
+    });
+
+    if (params.search && params.search.trim()) {
+      query.set("search", params.search.trim());
+    }
+
+    return this.request<PagedResponse<CompanySummary>>(`/admin/companies?${query.toString()}`);
+  }
+
+  async createPlatformCompany(payload: CreatePlatformCompanyPayload): Promise<CompanySummary> {
+    return this.request<CompanySummary>("/admin/companies", {
+      method: "POST",
+      body: JSON.stringify(payload)
+    });
+  }
+
+  async listPlatformUsers(params: {
+    page: number;
+    size: number;
+    sort: string;
+    status?: string;
+    search?: string;
+  }): Promise<PagedResponse<UserSummary>> {
+    const query = new URLSearchParams({
+      page: String(params.page),
+      size: String(params.size),
+      sort: params.sort
+    });
+
+    if (params.status) {
+      query.set("status", params.status);
+    }
+
+    if (params.search && params.search.trim()) {
+      query.set("search", params.search.trim());
+    }
+
+    return this.request<PagedResponse<UserSummary>>(`/admin/users?${query.toString()}`);
+  }
+
+  async createPlatformUser(payload: CreatePlatformUserPayload): Promise<CreatedPlatformUserResponse> {
+    return this.request<CreatedPlatformUserResponse>("/admin/users", {
+      method: "POST",
+      body: JSON.stringify(payload)
+    });
   }
 
   async updateCurrentCompany(payload: UpdateCompanyPayload): Promise<CompanyResponse> {

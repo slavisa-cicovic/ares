@@ -1,34 +1,103 @@
 package com.sc.ares.features.company.service;
 
 import com.sc.ares.common.api.ApiBadRequestException;
+import com.sc.ares.common.api.PagedResponse;
 import com.sc.ares.features.company.dto.CompanyResponse;
+import com.sc.ares.features.company.dto.CompanySummaryResponse;
+import com.sc.ares.features.company.dto.CreateCompanyRequest;
 import com.sc.ares.features.company.dto.UpdateCompanyRequest;
 import com.sc.ares.features.company.entity.Company;
+import com.sc.ares.features.company.entity.CompanyStatus;
 import com.sc.ares.features.company.entity.CompanyThemePreset;
 import com.sc.ares.features.company.repository.CompanyRepository;
 import java.util.UUID;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.sc.ares.features.auth.service.PlatformAdminAccessService;
 
 @Service
 public class CompanyManagementService {
 
     private static final String SIMPLE_EMAIL_PATTERN = "^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$";
     private static final String HEX_COLOR_PATTERN = "^#[0-9A-Fa-f]{6}$";
+    private static final int DEFAULT_PAGE_SIZE = 20;
+    private static final int MAX_PAGE_SIZE = 100;
 
     private final CompanyAdminAccessService companyAdminAccessService;
+    private final PlatformAdminAccessService platformAdminAccessService;
     private final CompanyRepository companyRepository;
     private final CompanyLogoStorageService companyLogoStorageService;
 
     public CompanyManagementService(
         CompanyAdminAccessService companyAdminAccessService,
+        PlatformAdminAccessService platformAdminAccessService,
         CompanyRepository companyRepository,
         CompanyLogoStorageService companyLogoStorageService
     ) {
         this.companyAdminAccessService = companyAdminAccessService;
+        this.platformAdminAccessService = platformAdminAccessService;
         this.companyRepository = companyRepository;
         this.companyLogoStorageService = companyLogoStorageService;
+    }
+
+    @Transactional(readOnly = true)
+    public PagedResponse<CompanySummaryResponse> listPlatformCompanies(
+        int page,
+        int size,
+        String sort,
+        String search
+    ) {
+        platformAdminAccessService.getRequiredPlatformAdminPrincipal();
+        PageRequest pageRequest = PageRequest.of(
+            normalizePage(page),
+            normalizeSize(size),
+            parsePlatformSort(sort)
+        );
+        String normalizedSearch = normalizeSearch(search);
+
+        Page<Company> resultPage = companyRepository.findPageByPlatformFilters(normalizedSearch, pageRequest);
+
+        return new PagedResponse<>(
+            resultPage.getContent().stream().map(this::toSummaryResponse).toList(),
+            resultPage.getNumber(),
+            resultPage.getSize(),
+            resultPage.getTotalElements(),
+            resultPage.getTotalPages()
+        );
+    }
+
+    @Transactional
+    public CompanySummaryResponse createPlatformCompany(CreateCompanyRequest request) {
+        platformAdminAccessService.getRequiredPlatformAdminPrincipal();
+
+        String name = normalizeRequired(request.name(), "Company name is required.");
+        String pib = normalizeRequired(request.pib(), "PIB is required.");
+        String mb = normalizeRequired(request.mb(), "MB is required.");
+
+        ensureUniqueCompanyIdentifiers(pib, mb);
+
+        Company company = Company.create(name, CompanyStatus.ACTIVE);
+        company.updateProfile(
+            name,
+            pib,
+            mb,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            CompanyThemePreset.AMBER
+        );
+
+        return toSummaryResponse(companyRepository.save(company));
     }
 
     @Transactional(readOnly = true)
@@ -86,12 +155,32 @@ public class CompanyManagementService {
         );
     }
 
+    private CompanySummaryResponse toSummaryResponse(Company company) {
+        return new CompanySummaryResponse(
+            company.getId(),
+            company.getName(),
+            company.getPib(),
+            company.getMb(),
+            company.getStatus().name()
+        );
+    }
+
     private void ensureUniqueCompanyIdentifiers(Company company) {
         if (companyRepository.existsByPibAndDeletedAtIsNullAndIdNot(company.getPib(), company.getId())) {
             throw new ApiBadRequestException("PIB must be unique.");
         }
 
         if (companyRepository.existsByMbAndDeletedAtIsNullAndIdNot(company.getMb(), company.getId())) {
+            throw new ApiBadRequestException("MB must be unique.");
+        }
+    }
+
+    private void ensureUniqueCompanyIdentifiers(String pib, String mb) {
+        if (companyRepository.existsByPibAndDeletedAtIsNull(pib)) {
+            throw new ApiBadRequestException("PIB must be unique.");
+        }
+
+        if (companyRepository.existsByMbAndDeletedAtIsNull(mb)) {
             throw new ApiBadRequestException("MB must be unique.");
         }
     }
@@ -153,5 +242,51 @@ public class CompanyManagementService {
         } catch (IllegalArgumentException exception) {
             throw new ApiBadRequestException("Invalid company theme preset.");
         }
+    }
+
+    private int normalizePage(int page) {
+        return Math.max(page, 0);
+    }
+
+    private int normalizeSize(int size) {
+        if (size <= 0) {
+            return DEFAULT_PAGE_SIZE;
+        }
+
+        return Math.min(size, MAX_PAGE_SIZE);
+    }
+
+    private Sort parsePlatformSort(String sort) {
+        String requestedSort = sort == null || sort.isBlank() ? "createdAt,desc" : sort.trim();
+        String[] parts = requestedSort.split(",", 2);
+        String field = parts[0].trim();
+        String mappedField = switch (field) {
+            case "name" -> "name";
+            case "pib" -> "pib";
+            case "mb" -> "mb";
+            case "status" -> "status";
+            case "createdAt" -> "createdAt";
+            default -> throw new ApiBadRequestException("Invalid sort field.");
+        };
+
+        Sort.Direction direction = Sort.Direction.DESC;
+
+        if (parts.length == 2) {
+            try {
+                direction = Sort.Direction.fromString(parts[1].trim());
+            } catch (IllegalArgumentException exception) {
+                throw new ApiBadRequestException("Invalid sort direction.");
+            }
+        }
+
+        return Sort.by(direction, mappedField);
+    }
+
+    private String normalizeSearch(String search) {
+        if (search == null || search.isBlank()) {
+            return "";
+        }
+
+        return search.trim();
     }
 }

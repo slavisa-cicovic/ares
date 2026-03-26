@@ -16,7 +16,8 @@ type SettingsScreenProps = {
 };
 
 export function SettingsScreen({ user, onBrandingPreviewChange }: SettingsScreenProps) {
-  const [activeTab, setActiveTab] = useState<SettingsTab>("company");
+  const isPlatformAdmin = user.platformAdmin;
+  const [activeTab, setActiveTab] = useState<SettingsTab>(isPlatformAdmin ? "profile" : "company");
 
   return (
     <Stack spacing={3}>
@@ -26,7 +27,9 @@ export function SettingsScreen({ user, onBrandingPreviewChange }: SettingsScreen
         </Typography>
         <Typography variant="h4">Workspace Settings</Typography>
         <Typography color="text.secondary" sx={{ mt: 1 }} variant="body2">
-          Keep company identity and personal account settings separate.
+          {isPlatformAdmin
+            ? "Manage your own profile and sign-in security."
+            : "Keep company identity and personal account settings separate."}
         </Typography>
       </Box>
 
@@ -34,11 +37,11 @@ export function SettingsScreen({ user, onBrandingPreviewChange }: SettingsScreen
         onChange={(_event, nextValue: SettingsTab) => setActiveTab(nextValue)}
         value={activeTab}
       >
-        <Tab label="Company" value="company" />
+        {!isPlatformAdmin ? <Tab label="Company" value="company" /> : null}
         <Tab label="Profile" value="profile" />
       </Tabs>
 
-      {activeTab === "company" ? (
+      {!isPlatformAdmin && activeTab === "company" ? (
         <CompanySettings onBrandingPreviewChange={onBrandingPreviewChange} user={user} />
       ) : null}
 

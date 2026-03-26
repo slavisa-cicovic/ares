@@ -12,9 +12,13 @@ import type { LoginPayload, SessionData } from "./types";
 import type {
   ChangePasswordPayload,
   ClientSummary,
+  CompanySummary,
   CompanyResponse,
   CreatePaymentPayload,
+  CreatePlatformCompanyPayload,
+  CreatePlatformUserPayload,
   CreateRefundPayload,
+  CreatedPlatformUserResponse,
   InvoiceDetail,
   InvoiceSummary,
   ItemSummary,
@@ -28,6 +32,7 @@ import type {
   PagedResponse,
   GetReportsSummaryParams,
   ReportsSummary,
+  UserSummary,
   UpsertClientPayload,
   UpsertInvoicePayload,
   UpsertItemPayload,
@@ -46,6 +51,21 @@ type AuthContextValue = {
   logout: () => Promise<void>;
   getReportsSummary: (params?: GetReportsSummaryParams) => Promise<ReportsSummary>;
   getCompany: () => Promise<CompanyResponse>;
+  getAdminCompanies: (params: {
+    page: number;
+    size: number;
+    sort: string;
+    search?: string;
+  }) => Promise<PagedResponse<CompanySummary>>;
+  createAdminCompany: (payload: CreatePlatformCompanyPayload) => Promise<CompanySummary>;
+  getAdminUsers: (params: {
+    page: number;
+    size: number;
+    sort: string;
+    status?: string;
+    search?: string;
+  }) => Promise<PagedResponse<UserSummary>>;
+  createAdminUser: (payload: CreatePlatformUserPayload) => Promise<CreatedPlatformUserResponse>;
   updateCompany: (payload: UpdateCompanyPayload) => Promise<CompanyResponse>;
   uploadCompanyLogo: (file: File) => Promise<string>;
   uploadUserLogo: (file: File) => Promise<string>;
@@ -148,6 +168,18 @@ export function AuthProvider({ children }: PropsWithChildren) {
     },
     getCompany: async () => {
       return client.getCurrentCompany();
+    },
+    getAdminCompanies: async (params) => {
+      return client.listPlatformCompanies(params);
+    },
+    createAdminCompany: async (payload) => {
+      return client.createPlatformCompany(payload);
+    },
+    getAdminUsers: async (params) => {
+      return client.listPlatformUsers(params);
+    },
+    createAdminUser: async (payload) => {
+      return client.createPlatformUser(payload);
     },
     updateCompany: async (payload) => {
       const updatedCompany = await client.updateCurrentCompany(payload);

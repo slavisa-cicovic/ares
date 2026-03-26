@@ -4,6 +4,30 @@ export type ChangePasswordPayload = {
   confirmNewPassword: string;
 };
 
+export type UserSummary = {
+  id: string;
+  companyId: string;
+  companyName: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  status: string;
+  roles: string[];
+};
+
+export type CreatePlatformUserPayload = {
+  companyId: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  status: string;
+  roles: string[];
+};
+
+export type CreatedPlatformUserResponse = UserSummary & {
+  temporaryPassword: string;
+};
+
 export type UpdateOwnProfilePayload = {
   email: string;
   firstName: string;

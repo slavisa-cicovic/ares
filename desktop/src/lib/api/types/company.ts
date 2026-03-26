@@ -16,6 +16,14 @@ export type CompanyResponse = {
   status: string;
 };
 
+export type CompanySummary = {
+  id: string;
+  name: string;
+  pib: string | null;
+  mb: string | null;
+  status: string;
+};
+
 export type UpdateCompanyPayload = {
   name: string;
   pib: string | null;
@@ -30,6 +38,12 @@ export type UpdateCompanyPayload = {
   brandColor: string | null;
   logoUrl: string | null;
   themePreset: string;
+};
+
+export type CreatePlatformCompanyPayload = {
+  name: string;
+  pib: string;
+  mb: string;
 };
 
 export type CompanyLogoUploadResponse = {

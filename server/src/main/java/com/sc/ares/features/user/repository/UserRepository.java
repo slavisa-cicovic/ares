@@ -30,6 +30,13 @@ public interface UserRepository extends JpaRepository<AppUser, UUID> {
         from AppUser user
         where user.company.id = :companyId
           and user.deletedAt is null
+          and not exists (
+              select 1
+              from UserRole userRole
+              join userRole.role role
+              where userRole.user = user
+                and role.scope = com.sc.ares.features.auth.entity.RoleScope.PLATFORM
+          )
           and (:status is null or user.status = :status)
           and (
               :search = ''
@@ -40,6 +47,28 @@ public interface UserRepository extends JpaRepository<AppUser, UUID> {
         """)
     Page<AppUser> findPageByCompanyIdAndFilters(
         UUID companyId,
+        UserStatus status,
+        String search,
+        Pageable pageable
+    );
+
+    @EntityGraph(attributePaths = "company")
+    @Query("""
+        select user
+        from AppUser user
+        join user.company company
+        where user.deletedAt is null
+          and company.deletedAt is null
+          and (:status is null or user.status = :status)
+          and (
+              :search = ''
+              or upper(user.email) like upper(concat('%', :search, '%'))
+              or upper(user.firstName) like upper(concat('%', :search, '%'))
+              or upper(user.lastName) like upper(concat('%', :search, '%'))
+              or upper(company.name) like upper(concat('%', :search, '%'))
+          )
+        """)
+    Page<AppUser> findPageByPlatformFilters(
         UserStatus status,
         String search,
         Pageable pageable

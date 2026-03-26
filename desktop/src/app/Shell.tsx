@@ -16,6 +16,8 @@ import {
 
 export type AppView =
   | "dashboard"
+  | "companies"
+  | "users"
   | "clients"
   | "items"
   | "invoices"
@@ -29,18 +31,25 @@ type ShellProps = PropsWithChildren<{
   userName: string;
   userEmail: string;
   userLogoUrl: string | null;
+  platformAdmin: boolean;
   activeView: AppView;
   onNavigate: (view: AppView) => void;
   onLogout: () => Promise<void>;
 }>;
 
-const navigationItems: Array<{ id: AppView; label: string }> = [
+const tenantNavigationItems: Array<{ id: AppView; label: string }> = [
   { id: "dashboard", label: "Dashboard" },
   { id: "clients", label: "Clients" },
   { id: "items", label: "Items" },
   { id: "invoices", label: "Invoices" },
   { id: "payments", label: "Payments" },
   { id: "reports", label: "Reports" },
+  { id: "settings", label: "Settings" }
+];
+
+const platformNavigationItems: Array<{ id: AppView; label: string }> = [
+  { id: "companies", label: "Companies" },
+  { id: "users", label: "Users" },
   { id: "settings", label: "Settings" }
 ];
 
@@ -52,11 +61,14 @@ export function Shell({
   userName,
   userEmail,
   userLogoUrl,
+  platformAdmin,
   activeView,
   onNavigate,
   onLogout,
   children
 }: ShellProps) {
+  const navigationItems = platformAdmin ? platformNavigationItems : tenantNavigationItems;
+
   return (
     <Box sx={{ display: "flex", minHeight: "100vh" }}>
       <Drawer
@@ -105,7 +117,7 @@ export function Shell({
           <Toolbar sx={{ alignItems: "center", gap: 3, justifyContent: "space-between", py: 2 }}>
             <Stack alignItems="center" direction="row" spacing={2} alignSelf="center">
               <Avatar
-                src={companyLogoUrl ?? undefined}
+                src={!platformAdmin ? (companyLogoUrl ?? undefined) : undefined}
                 sx={{
                   width: 52,
                   height: 52,
@@ -116,14 +128,14 @@ export function Shell({
                   fontSize: 18
                 }}
               >
-                {companyName.charAt(0).toUpperCase()}
+                {(platformAdmin ? "Ares" : companyName).charAt(0).toUpperCase()}
               </Avatar>
 
               <Stack spacing={0.25}>
                 <Typography color="primary.main" variant="overline">
-                  Active Company
+                  {platformAdmin ? "Platform" : "Active Company"}
                 </Typography>
-                <Typography variant="h5">{companyName}</Typography>
+                <Typography variant="h5">{platformAdmin ? "Super Admin Console" : companyName}</Typography>
               </Stack>
             </Stack>
 

@@ -96,6 +96,7 @@ class CompanyUserManagementIntegrationTests {
     private Company companyTwo;
     private Role companyAdminRole;
     private Role userRole;
+    private Role superAdminRole;
     private AppUser adminOne;
     private AppUser userOne;
     private AppUser adminTwo;
@@ -116,14 +117,114 @@ class CompanyUserManagementIntegrationTests {
         companyOne = companyRepository.save(Company.create("Alpha Company", CompanyStatus.ACTIVE));
         companyTwo = companyRepository.save(Company.create("Beta Company", CompanyStatus.ACTIVE));
 
-        roleRepository.save(Role.create(null, "super-admin", "Super Admin", RoleScope.PLATFORM, true));
+        superAdminRole = roleRepository.save(Role.create(null, "super-admin", "Super Admin", RoleScope.PLATFORM, true));
         companyAdminRole = roleRepository.save(Role.create(null, "company-admin", "Company Admin", RoleScope.COMPANY, true));
         userRole = roleRepository.save(Role.create(null, "user", "User", RoleScope.COMPANY, true));
 
+        createUser(companyOne, "superadmin@local.ares", UserStatus.ACTIVE, superAdminRole);
         adminOne = createUser(companyOne, "admin.one@local.ares", UserStatus.ACTIVE, companyAdminRole);
         userOne = createUser(companyOne, "user.one@local.ares", UserStatus.ACTIVE, userRole);
         adminTwo = createUser(companyTwo, "admin.two@local.ares", UserStatus.ACTIVE, companyAdminRole);
         createUser(companyTwo, "user.two@local.ares", UserStatus.ACTIVE, userRole);
+    }
+
+    @Test
+    void superAdminShouldListAllCompanies() throws Exception {
+        String token = login("superadmin@local.ares", "ares-test").get("accessToken").asText();
+
+        mockMvc.perform(
+                get("/admin/companies")
+                    .header("Authorization", bearer(token))
+            )
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.items.length()").value(2))
+            .andExpect(jsonPath("$.items[*].name").value(Matchers.containsInAnyOrder(
+                "Alpha Company",
+                "Beta Company"
+            )));
+    }
+
+    @Test
+    void superAdminShouldCreateCompany() throws Exception {
+        String token = login("superadmin@local.ares", "ares-test").get("accessToken").asText();
+
+        mockMvc.perform(
+                post("/admin/companies")
+                    .header("Authorization", bearer(token))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(Map.of(
+                        "name", "Gamma Company",
+                        "pib", "123456789",
+                        "mb", "98765432"
+                    )))
+            )
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.name").value("Gamma Company"))
+            .andExpect(jsonPath("$.pib").value("123456789"))
+            .andExpect(jsonPath("$.mb").value("98765432"))
+            .andExpect(jsonPath("$.status").value("ACTIVE"));
+    }
+
+    @Test
+    void superAdminShouldListAllUsersAcrossCompanies() throws Exception {
+        String token = login("superadmin@local.ares", "ares-test").get("accessToken").asText();
+
+        mockMvc.perform(
+                get("/admin/users")
+                    .header("Authorization", bearer(token))
+            )
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.items.length()").value(5))
+            .andExpect(jsonPath("$.items[*].email").value(Matchers.containsInAnyOrder(
+                "superadmin@local.ares",
+                "admin.one@local.ares",
+                "user.one@local.ares",
+                "admin.two@local.ares",
+                "user.two@local.ares"
+            )));
+    }
+
+    @Test
+    void superAdminShouldCreateCompanyAdminForSelectedCompany() throws Exception {
+        String token = login("superadmin@local.ares", "ares-test").get("accessToken").asText();
+
+        mockMvc.perform(
+                post("/admin/users")
+                    .header("Authorization", bearer(token))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(Map.of(
+                        "companyId", companyTwo.getId(),
+                        "email", "new.admin@local.ares",
+                        "firstName", "New",
+                        "lastName", "Admin",
+                        "status", "ACTIVE",
+                        "roles", List.of("company-admin")
+                    )))
+            )
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.companyId").value(companyTwo.getId().toString()))
+            .andExpect(jsonPath("$.companyName").value("Beta Company"))
+            .andExpect(jsonPath("$.email").value("new.admin@local.ares"))
+            .andExpect(jsonPath("$.roles[0]").value("company-admin"))
+            .andExpect(jsonPath("$.temporaryPassword").isString())
+            .andExpect(jsonPath("$.temporaryPassword", Matchers.hasLength(12)));
+    }
+
+    @Test
+    void companyAdminShouldBeRejectedFromSuperAdminRoutes() throws Exception {
+        String token = login("admin.one@local.ares", "ares-test").get("accessToken").asText();
+
+        mockMvc.perform(
+                get("/admin/companies")
+                    .header("Authorization", bearer(token))
+            )
+            .andExpect(status().isForbidden());
+
+        mockMvc.perform(
+                get("/admin/users")
+                    .header("Authorization", bearer(token))
+            )
+            .andExpect(status().isForbidden());
     }
 
     @Test
