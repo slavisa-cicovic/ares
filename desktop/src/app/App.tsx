@@ -9,6 +9,7 @@ import { ItemsScreen } from "../features/items/ItemsScreen";
 import { InvoicesScreen } from "../features/invoices/InvoicesScreen";
 import { PaymentsScreen } from "../features/payments/PaymentsScreen";
 import { ReportsScreen } from "../features/reports/ReportsScreen";
+import { UsersScreen } from "../features/users/UsersScreen";
 import { SuperAdminCompaniesScreen } from "../features/admin/SuperAdminCompaniesScreen";
 import { SuperAdminUsersScreen } from "../features/admin/SuperAdminUsersScreen";
 import { normalizeDesktopTheme } from "../features/settings/themeStorage";
@@ -27,6 +28,7 @@ function AppContent() {
   const [brandingPreview, setBrandingPreview] = useState<BrandingPreviewState | null>(null);
   const isAuthenticated = state.status === "authenticated";
   const isPlatformAdmin = isAuthenticated ? state.user.platformAdmin : false;
+  const isCompanyAdmin = isAuthenticated ? state.user.roles.includes("company-admin") : false;
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -38,9 +40,17 @@ function AppContent() {
     }
 
     if (!isPlatformAdmin && (activeView === "companies" || activeView === "users")) {
+      if (activeView === "users" && isCompanyAdmin) {
+        return;
+      }
+
       setActiveView("dashboard");
     }
-  }, [activeView, isAuthenticated, isPlatformAdmin]);
+
+    if (!isPlatformAdmin && !isCompanyAdmin && activeView === "users") {
+      setActiveView("dashboard");
+    }
+  }, [activeView, isAuthenticated, isCompanyAdmin, isPlatformAdmin]);
 
   if (state.status === "bootstrapping") {
     return <div className="screen-state">Restoring session...</div>;
@@ -61,6 +71,7 @@ function AppContent() {
         companyLogoUrl={brandingPreview?.logoUrl ?? state.user.companyLogoUrl}
         companyName={state.user.companyName}
         onNavigate={setActiveView}
+        companyAdmin={isCompanyAdmin}
         platformAdmin={state.user.platformAdmin}
         userEmail={state.user.email}
         userLogoUrl={state.user.userLogoUrl}
@@ -70,6 +81,7 @@ function AppContent() {
         {!isPlatformAdmin && activeView === "dashboard" ? <DashboardScreen /> : null}
         {isPlatformAdmin && activeView === "companies" ? <SuperAdminCompaniesScreen /> : null}
         {isPlatformAdmin && activeView === "users" ? <SuperAdminUsersScreen /> : null}
+        {!isPlatformAdmin && isCompanyAdmin && activeView === "users" ? <UsersScreen /> : null}
         {activeView === "settings" ? (
           <SettingsScreen
             onBrandingPreviewChange={setBrandingPreview}

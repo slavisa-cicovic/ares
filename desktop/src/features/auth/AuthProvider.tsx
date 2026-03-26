@@ -11,6 +11,7 @@ import { clearSession, loadSession, saveSession } from "./sessionStorage";
 import type { LoginPayload, SessionData } from "./types";
 import type {
   ChangePasswordPayload,
+  CreateUserPayload,
   ClientSummary,
   CompanySummary,
   CompanyResponse,
@@ -19,6 +20,7 @@ import type {
   CreatePlatformUserPayload,
   CreateRefundPayload,
   CreatedPlatformUserResponse,
+  CreatedUserResponse,
   InvoiceDetail,
   InvoiceSummary,
   ItemSummary,
@@ -66,6 +68,14 @@ type AuthContextValue = {
     search?: string;
   }) => Promise<PagedResponse<UserSummary>>;
   createAdminUser: (payload: CreatePlatformUserPayload) => Promise<CreatedPlatformUserResponse>;
+  getUsers: (params: {
+    page: number;
+    size: number;
+    sort: string;
+    status?: string;
+    search?: string;
+  }) => Promise<PagedResponse<UserSummary>>;
+  createUser: (payload: CreateUserPayload) => Promise<CreatedUserResponse>;
   updateCompany: (payload: UpdateCompanyPayload) => Promise<CompanyResponse>;
   uploadCompanyLogo: (file: File) => Promise<string>;
   uploadUserLogo: (file: File) => Promise<string>;
@@ -180,6 +190,12 @@ export function AuthProvider({ children }: PropsWithChildren) {
     },
     createAdminUser: async (payload) => {
       return client.createPlatformUser(payload);
+    },
+    getUsers: async (params) => {
+      return client.listUsers(params);
+    },
+    createUser: async (payload) => {
+      return client.createUser(payload);
     },
     updateCompany: async (payload) => {
       const updatedCompany = await client.updateCurrentCompany(payload);

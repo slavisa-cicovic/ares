@@ -15,6 +15,7 @@ import com.sc.ares.features.company.entity.Company;
 import com.sc.ares.features.company.repository.CompanyRepository;
 import com.sc.ares.features.company.service.CompanyAdminAccessService;
 import com.sc.ares.features.user.dto.ChangePasswordRequest;
+import com.sc.ares.features.user.dto.CreatedUserResponse;
 import com.sc.ares.features.user.dto.CreateUserRequest;
 import com.sc.ares.features.user.dto.CreatePlatformUserRequest;
 import com.sc.ares.features.user.dto.OwnProfileResponse;
@@ -173,16 +174,17 @@ public class UserManagementService {
     }
 
     @Transactional
-    public UserResponse createUser(CreateUserRequest request) {
+    public CreatedUserResponse createUser(CreateUserRequest request) {
         Company company = companyAdminAccessService.getRequiredManagedCompany();
         ensureEmailAvailableForCreate(request.email());
         UserStatus status = parseRequiredStatus(request.status());
         List<Role> roles = resolveAssignableRoles(request.roles());
+        String temporaryPassword = generateTemporaryPassword();
 
         AppUser user = AppUser.create(
             company,
             request.email().trim(),
-            passwordEncoder.encode(request.password()),
+            passwordEncoder.encode(temporaryPassword),
             request.firstName().trim(),
             request.lastName().trim(),
             status
@@ -192,7 +194,17 @@ public class UserManagementService {
             AppUser savedUser = userRepository.save(user);
             replaceRoles(savedUser, roles);
 
-            return toResponse(savedUser, roles.stream().map(Role::getCode).sorted().toList());
+            return new CreatedUserResponse(
+                savedUser.getId(),
+                company.getId(),
+                company.getName(),
+                savedUser.getEmail(),
+                savedUser.getFirstName(),
+                savedUser.getLastName(),
+                savedUser.getStatus().name(),
+                roles.stream().map(Role::getCode).sorted().toList(),
+                temporaryPassword
+            );
         } catch (DataIntegrityViolationException exception) {
             throw new BusinessConflictException("User email already exists.");
         }
@@ -441,6 +453,8 @@ public class UserManagementService {
     private UserResponse toResponse(AppUser user, List<String> roleCodes) {
         return new UserResponse(
             user.getId(),
+            user.getCompany().getId(),
+            user.getCompany().getName(),
             user.getEmail(),
             user.getFirstName(),
             user.getLastName(),

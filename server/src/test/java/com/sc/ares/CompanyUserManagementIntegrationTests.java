@@ -477,7 +477,6 @@ class CompanyUserManagementIntegrationTests {
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(objectMapper.writeValueAsString(Map.of(
                         "email", "new.user@local.ares",
-                        "password", "secret123",
                         "firstName", "New",
                         "lastName", "User",
                         "status", "ACTIVE",
@@ -486,7 +485,9 @@ class CompanyUserManagementIntegrationTests {
             )
             .andExpect(status().isCreated())
             .andExpect(jsonPath("$.email").value("new.user@local.ares"))
-            .andExpect(jsonPath("$.roles[0]").value("user"));
+            .andExpect(jsonPath("$.roles[0]").value("user"))
+            .andExpect(jsonPath("$.temporaryPassword").isString())
+            .andExpect(jsonPath("$.temporaryPassword", Matchers.hasLength(12)));
     }
 
     @Test
@@ -556,7 +557,6 @@ class CompanyUserManagementIntegrationTests {
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(objectMapper.writeValueAsString(Map.of(
                         "email", "forbidden.role@local.ares",
-                        "password", "secret123",
                         "firstName", "Forbidden",
                         "lastName", "Role",
                         "status", "ACTIVE",
@@ -613,7 +613,6 @@ class CompanyUserManagementIntegrationTests {
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(objectMapper.writeValueAsString(Map.of(
                         "email", "user.two@local.ares",
-                        "password", "secret123",
                         "firstName", "Dupe",
                         "lastName", "User",
                         "status", "ACTIVE",

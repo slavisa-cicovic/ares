@@ -32,6 +32,7 @@ type ShellProps = PropsWithChildren<{
   userEmail: string;
   userLogoUrl: string | null;
   platformAdmin: boolean;
+  companyAdmin: boolean;
   activeView: AppView;
   onNavigate: (view: AppView) => void;
   onLogout: () => Promise<void>;
@@ -62,12 +63,17 @@ export function Shell({
   userEmail,
   userLogoUrl,
   platformAdmin,
+  companyAdmin,
   activeView,
   onNavigate,
   onLogout,
   children
 }: ShellProps) {
-  const navigationItems = platformAdmin ? platformNavigationItems : tenantNavigationItems;
+  const navigationItems = platformAdmin
+    ? platformNavigationItems
+    : companyAdmin
+      ? [...tenantNavigationItems.slice(0, 1), { id: "users" as const, label: "Users" }, ...tenantNavigationItems.slice(1)]
+      : tenantNavigationItems;
 
   return (
     <Box sx={{ display: "flex", minHeight: "100vh" }}>

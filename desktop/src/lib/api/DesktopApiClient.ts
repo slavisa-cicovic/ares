@@ -5,12 +5,14 @@ import type {
   CreatePaymentPayload,
   CreatePlatformCompanyPayload,
   CreatePlatformUserPayload,
+  CreateUserPayload,
   CreateRefundPayload,
   ClientSummary,
   CompanyLogoUploadResponse,
   CompanyResponse,
   CompanySummary,
   CreatedPlatformUserResponse,
+  CreatedUserResponse,
   InvoiceDetail,
   InvoiceSummary,
   ItemSummary,
@@ -182,6 +184,37 @@ export class DesktopApiClient {
 
   async createPlatformUser(payload: CreatePlatformUserPayload): Promise<CreatedPlatformUserResponse> {
     return this.request<CreatedPlatformUserResponse>("/admin/users", {
+      method: "POST",
+      body: JSON.stringify(payload)
+    });
+  }
+
+  async listUsers(params: {
+    page: number;
+    size: number;
+    sort: string;
+    status?: string;
+    search?: string;
+  }): Promise<PagedResponse<UserSummary>> {
+    const query = new URLSearchParams({
+      page: String(params.page),
+      size: String(params.size),
+      sort: params.sort
+    });
+
+    if (params.status) {
+      query.set("status", params.status);
+    }
+
+    if (params.search && params.search.trim()) {
+      query.set("search", params.search.trim());
+    }
+
+    return this.request<PagedResponse<UserSummary>>(`/users?${query.toString()}`);
+  }
+
+  async createUser(payload: CreateUserPayload): Promise<CreatedUserResponse> {
+    return this.request<CreatedUserResponse>("/users", {
       method: "POST",
       body: JSON.stringify(payload)
     });

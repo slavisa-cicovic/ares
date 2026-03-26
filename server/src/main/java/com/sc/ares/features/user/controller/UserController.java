@@ -22,6 +22,7 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import com.sc.ares.common.api.PagedResponse;
 import com.sc.ares.features.user.dto.ChangePasswordRequest;
+import com.sc.ares.features.user.dto.CreatedUserResponse;
 import com.sc.ares.features.user.dto.CreateUserRequest;
 import com.sc.ares.features.user.dto.OwnProfileResponse;
 import com.sc.ares.features.user.dto.UpdateOwnProfileRequest;
@@ -66,7 +67,7 @@ public class UserController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public UserResponse createUser(@Valid @RequestBody CreateUserRequest request) {
+    public CreatedUserResponse createUser(@Valid @RequestBody CreateUserRequest request) {
         return userManagementService.createUser(request);
     }
 

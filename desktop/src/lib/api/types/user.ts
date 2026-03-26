@@ -24,7 +24,19 @@ export type CreatePlatformUserPayload = {
   roles: string[];
 };
 
+export type CreateUserPayload = {
+  email: string;
+  firstName: string;
+  lastName: string;
+  status: string;
+  roles: string[];
+};
+
 export type CreatedPlatformUserResponse = UserSummary & {
+  temporaryPassword: string;
+};
+
+export type CreatedUserResponse = UserSummary & {
   temporaryPassword: string;
 };
 
