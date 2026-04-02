@@ -19,6 +19,7 @@ import com.sc.ares.features.user.dto.CreatedUserResponse;
 import com.sc.ares.features.user.dto.CreateUserRequest;
 import com.sc.ares.features.user.dto.CreatePlatformUserRequest;
 import com.sc.ares.features.user.dto.OwnProfileResponse;
+import com.sc.ares.features.user.dto.PasswordResetResponse;
 import com.sc.ares.features.user.dto.PlatformCreatedUserResponse;
 import com.sc.ares.features.user.dto.PlatformUserResponse;
 import com.sc.ares.features.user.dto.UpdateOwnProfileRequest;
@@ -297,6 +298,30 @@ public class UserManagementService {
     }
 
     @Transactional
+    public PasswordResetResponse resetUserPassword(UUID userId) {
+        UUID companyId = companyAdminAccessService.getRequiredManagedCompanyId();
+        UUID currentUserId = companyAdminAccessService.getRequiredCurrentUserId();
+        AppUser user = getRequiredTenantUser(userId, companyId);
+
+        if (currentUserId.equals(userId)) {
+            throw new BusinessConflictException("Company admin cannot reset their own password through admin flow.");
+        }
+
+        return resetPassword(user);
+    }
+
+    @Transactional
+    public PasswordResetResponse resetPlatformUserPassword(UUID userId) {
+        platformAdminAccessService.getRequiredPlatformAdminPrincipal();
+        AppUser user = userRepository.findByIdAndDeletedAtIsNull(userId)
+            .orElseThrow(() -> new ResourceNotFoundException("User not found."));
+
+        ensureTenantManagedUser(user);
+
+        return resetPassword(user);
+    }
+
+    @Transactional
     public void changeOwnPassword(ChangePasswordRequest request) {
         AppUser user = userRepository.findByIdAndDeletedAtIsNull(currentPrincipalService.getRequiredPrincipal().userId())
             .orElseThrow(() -> new ResourceNotFoundException("User not found."));
@@ -360,14 +385,18 @@ public class UserManagementService {
         AppUser user = userRepository.findByIdAndCompanyIdAndDeletedAtIsNull(userId, companyId)
             .orElseThrow(() -> new ResourceNotFoundException("User not found."));
 
+        ensureTenantManagedUser(user);
+
+        return user;
+    }
+
+    private void ensureTenantManagedUser(AppUser user) {
         boolean hasPlatformRole = userRoleRepository.findAllByUserId(user.getId()).stream()
             .anyMatch(userRole -> userRole.getRole().getScope() == RoleScope.PLATFORM);
 
         if (hasPlatformRole) {
             throw new ResourceNotFoundException("User not found.");
         }
-
-        return user;
     }
 
     private void ensureEmailAvailableForCreate(String email) {
@@ -533,6 +562,20 @@ public class UserManagementService {
         }
 
         return search.trim();
+    }
+
+    private PasswordResetResponse resetPassword(AppUser user) {
+        String temporaryPassword = generateTemporaryPassword();
+        user.updatePasswordHash(passwordEncoder.encode(temporaryPassword));
+        AppUser savedUser = userRepository.save(user);
+
+        return new PasswordResetResponse(
+            savedUser.getId(),
+            savedUser.getCompany().getId(),
+            savedUser.getCompany().getName(),
+            savedUser.getEmail(),
+            temporaryPassword
+        );
     }
 
     private String generateTemporaryPassword() {

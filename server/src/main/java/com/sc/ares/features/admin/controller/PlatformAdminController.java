@@ -5,12 +5,14 @@ import com.sc.ares.features.company.dto.CompanySummaryResponse;
 import com.sc.ares.features.company.dto.CreateCompanyRequest;
 import com.sc.ares.features.company.service.CompanyManagementService;
 import com.sc.ares.features.user.dto.CreatePlatformUserRequest;
+import com.sc.ares.features.user.dto.PasswordResetResponse;
 import com.sc.ares.features.user.dto.PlatformCreatedUserResponse;
 import com.sc.ares.features.user.dto.PlatformUserResponse;
 import com.sc.ares.features.user.service.UserManagementService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -64,5 +66,10 @@ public class PlatformAdminController {
     @ResponseStatus(HttpStatus.CREATED)
     public PlatformCreatedUserResponse createUser(@Valid @RequestBody CreatePlatformUserRequest request) {
         return userManagementService.createPlatformUser(request);
+    }
+
+    @PostMapping("/users/{userId}/reset-password")
+    public PasswordResetResponse resetUserPassword(@PathVariable java.util.UUID userId) {
+        return userManagementService.resetPlatformUserPassword(userId);
     }
 }

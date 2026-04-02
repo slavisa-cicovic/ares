@@ -211,6 +211,23 @@ class CompanyUserManagementIntegrationTests {
     }
 
     @Test
+    void superAdminShouldResetTenantUserPassword() throws Exception {
+        String token = login("superadmin@local.ares", "ares-test").get("accessToken").asText();
+
+        mockMvc.perform(
+                post("/admin/users/{userId}/reset-password", adminTwo.getId())
+                    .header("Authorization", bearer(token))
+            )
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.userId").value(adminTwo.getId().toString()))
+            .andExpect(jsonPath("$.companyId").value(companyTwo.getId().toString()))
+            .andExpect(jsonPath("$.companyName").value(companyTwo.getName()))
+            .andExpect(jsonPath("$.email").value("admin.two@local.ares"))
+            .andExpect(jsonPath("$.temporaryPassword").isString())
+            .andExpect(jsonPath("$.temporaryPassword", Matchers.hasLength(12)));
+    }
+
+    @Test
     void companyAdminShouldBeRejectedFromSuperAdminRoutes() throws Exception {
         String token = login("admin.one@local.ares", "ares-test").get("accessToken").asText();
 
@@ -222,6 +239,12 @@ class CompanyUserManagementIntegrationTests {
 
         mockMvc.perform(
                 get("/admin/users")
+                    .header("Authorization", bearer(token))
+            )
+            .andExpect(status().isForbidden());
+
+        mockMvc.perform(
+                post("/admin/users/{userId}/reset-password", adminTwo.getId())
                     .header("Authorization", bearer(token))
             )
             .andExpect(status().isForbidden());
@@ -449,6 +472,12 @@ class CompanyUserManagementIntegrationTests {
                     .header("Authorization", bearer(token))
             )
             .andExpect(status().isForbidden());
+
+        mockMvc.perform(
+                post("/users/{userId}/reset-password", adminOne.getId())
+                    .header("Authorization", bearer(token))
+            )
+            .andExpect(status().isForbidden());
     }
 
     @Test
@@ -488,6 +517,34 @@ class CompanyUserManagementIntegrationTests {
             .andExpect(jsonPath("$.roles[0]").value("user"))
             .andExpect(jsonPath("$.temporaryPassword").isString())
             .andExpect(jsonPath("$.temporaryPassword", Matchers.hasLength(12)));
+    }
+
+    @Test
+    void companyAdminShouldResetOwnCompanyUserPassword() throws Exception {
+        String token = login("admin.one@local.ares", "ares-test").get("accessToken").asText();
+
+        mockMvc.perform(
+                post("/users/{userId}/reset-password", userOne.getId())
+                    .header("Authorization", bearer(token))
+            )
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.userId").value(userOne.getId().toString()))
+            .andExpect(jsonPath("$.companyId").value(companyOne.getId().toString()))
+            .andExpect(jsonPath("$.companyName").value(companyOne.getName()))
+            .andExpect(jsonPath("$.email").value("user.one@local.ares"))
+            .andExpect(jsonPath("$.temporaryPassword").isString())
+            .andExpect(jsonPath("$.temporaryPassword", Matchers.hasLength(12)));
+    }
+
+    @Test
+    void companyAdminShouldNotResetAnotherCompanyUserPassword() throws Exception {
+        String token = login("admin.one@local.ares", "ares-test").get("accessToken").asText();
+
+        mockMvc.perform(
+                post("/users/{userId}/reset-password", adminTwo.getId())
+                    .header("Authorization", bearer(token))
+            )
+            .andExpect(status().isNotFound());
     }
 
     @Test

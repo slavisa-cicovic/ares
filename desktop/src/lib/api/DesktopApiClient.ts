@@ -24,6 +24,7 @@ import type {
   PaymentSummary,
   RefundRecord,
   PagedResponse,
+  PasswordResetResponse,
   GetReportsSummaryParams,
   ReportsSummary,
   UserSummary,
@@ -189,6 +190,12 @@ export class DesktopApiClient {
     });
   }
 
+  async resetPlatformUserPassword(userId: string): Promise<PasswordResetResponse> {
+    return this.request<PasswordResetResponse>(`/admin/users/${userId}/reset-password`, {
+      method: "POST"
+    });
+  }
+
   async listUsers(params: {
     page: number;
     size: number;
@@ -217,6 +224,12 @@ export class DesktopApiClient {
     return this.request<CreatedUserResponse>("/users", {
       method: "POST",
       body: JSON.stringify(payload)
+    });
+  }
+
+  async resetUserPassword(userId: string): Promise<PasswordResetResponse> {
+    return this.request<PasswordResetResponse>(`/users/${userId}/reset-password`, {
+      method: "POST"
     });
   }
 

@@ -40,6 +40,14 @@ export type CreatedUserResponse = UserSummary & {
   temporaryPassword: string;
 };
 
+export type PasswordResetResponse = {
+  userId: string;
+  companyId: string;
+  companyName: string;
+  email: string;
+  temporaryPassword: string;
+};
+
 export type UpdateOwnProfilePayload = {
   email: string;
   firstName: string;

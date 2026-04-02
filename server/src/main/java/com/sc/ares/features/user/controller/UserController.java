@@ -25,6 +25,7 @@ import com.sc.ares.features.user.dto.ChangePasswordRequest;
 import com.sc.ares.features.user.dto.CreatedUserResponse;
 import com.sc.ares.features.user.dto.CreateUserRequest;
 import com.sc.ares.features.user.dto.OwnProfileResponse;
+import com.sc.ares.features.user.dto.PasswordResetResponse;
 import com.sc.ares.features.user.dto.UpdateOwnProfileRequest;
 import com.sc.ares.features.user.dto.UpdateUserRequest;
 import com.sc.ares.features.user.dto.UserLogoUploadResponse;
@@ -74,6 +75,11 @@ public class UserController {
     @PutMapping("/{userId:[0-9a-fA-F\\-]{36}}")
     public UserResponse updateUser(@PathVariable UUID userId, @Valid @RequestBody UpdateUserRequest request) {
         return userManagementService.updateUser(userId, request);
+    }
+
+    @PostMapping("/{userId:[0-9a-fA-F\\-]{36}}/reset-password")
+    public PasswordResetResponse resetUserPassword(@PathVariable UUID userId) {
+        return userManagementService.resetUserPassword(userId);
     }
 
     @PutMapping("/me")

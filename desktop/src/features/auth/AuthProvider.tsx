@@ -32,6 +32,7 @@ import type {
   PaymentSummary,
   RefundRecord,
   PagedResponse,
+  PasswordResetResponse,
   GetReportsSummaryParams,
   ReportsSummary,
   UserSummary,
@@ -68,6 +69,7 @@ type AuthContextValue = {
     search?: string;
   }) => Promise<PagedResponse<UserSummary>>;
   createAdminUser: (payload: CreatePlatformUserPayload) => Promise<CreatedPlatformUserResponse>;
+  resetAdminUserPassword: (userId: string) => Promise<PasswordResetResponse>;
   getUsers: (params: {
     page: number;
     size: number;
@@ -76,6 +78,7 @@ type AuthContextValue = {
     search?: string;
   }) => Promise<PagedResponse<UserSummary>>;
   createUser: (payload: CreateUserPayload) => Promise<CreatedUserResponse>;
+  resetUserPassword: (userId: string) => Promise<PasswordResetResponse>;
   updateCompany: (payload: UpdateCompanyPayload) => Promise<CompanyResponse>;
   uploadCompanyLogo: (file: File) => Promise<string>;
   uploadUserLogo: (file: File) => Promise<string>;
@@ -191,11 +194,17 @@ export function AuthProvider({ children }: PropsWithChildren) {
     createAdminUser: async (payload) => {
       return client.createPlatformUser(payload);
     },
+    resetAdminUserPassword: async (userId) => {
+      return client.resetPlatformUserPassword(userId);
+    },
     getUsers: async (params) => {
       return client.listUsers(params);
     },
     createUser: async (payload) => {
       return client.createUser(payload);
+    },
+    resetUserPassword: async (userId) => {
+      return client.resetUserPassword(userId);
     },
     updateCompany: async (payload) => {
       const updatedCompany = await client.updateCurrentCompany(payload);

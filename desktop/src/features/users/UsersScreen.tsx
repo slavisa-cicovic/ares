@@ -24,10 +24,10 @@ import {
   TextField,
   Typography
 } from "@mui/material";
-import { CustomDialog } from "../../components";
+import { ConfirmDialog, CustomDialog } from "../../components";
 import { emptyRows, useTable } from "../../components/table";
 import { ApiClientError } from "../../lib/api/DesktopApiClient";
-import type { CreatedUserResponse, PagedResponse, UserSummary } from "../../lib/api/types";
+import type { CreatedUserResponse, PagedResponse, PasswordResetResponse, UserSummary } from "../../lib/api/types";
 import { useAuth } from "../auth/AuthProvider";
 import { UserFormDialog } from "./UserFormDialog";
 
@@ -35,7 +35,8 @@ const headCells = [
   { id: "email", label: "Email", minWidth: 240, sortable: true },
   { id: "name", label: "Name", minWidth: 220, sortable: false },
   { id: "roles", label: "Roles", minWidth: 180, sortable: false },
-  { id: "status", label: "Status", minWidth: 120, sortable: true }
+  { id: "status", label: "Status", minWidth: 120, sortable: true },
+  { id: "actions", label: "Actions", minWidth: 160, sortable: false }
 ] as const;
 
 const emptyUserPage: PagedResponse<UserSummary> = {
@@ -55,7 +56,7 @@ function toSortValue(orderBy: string, order: "asc" | "desc"): string {
 }
 
 export function UsersScreen() {
-  const { createUser, getUsers } = useAuth();
+  const { createUser, getUsers, resetUserPassword } = useAuth();
   const table = useTable({
     defaultOrderBy: "email",
     defaultOrder: "asc",
@@ -69,6 +70,9 @@ export function UsersScreen() {
   const [error, setError] = useState<string | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [createdUser, setCreatedUser] = useState<CreatedUserResponse | null>(null);
+  const [resetTarget, setResetTarget] = useState<UserSummary | null>(null);
+  const [isResetting, setIsResetting] = useState(false);
+  const [resetResult, setResetResult] = useState<PasswordResetResponse | null>(null);
 
   const rows = pageData.items;
   const emptyRowsCount = emptyRows(table.page, table.rowsPerPage, rows.length);
@@ -247,6 +251,18 @@ export function UsersScreen() {
                             </Stack>
                           </TableCell>
                           <TableCell>{row.status}</TableCell>
+                          <TableCell>
+                            <Button
+                              onClick={() => {
+                                blurActiveElement();
+                                setResetTarget(row);
+                              }}
+                              size="small"
+                              variant="text"
+                            >
+                              Reset Password
+                            </Button>
+                          </TableCell>
                         </TableRow>
                       ))
                     : null}
@@ -316,6 +332,77 @@ export function UsersScreen() {
             </Stack>
           </Paper>
         </Stack>
+      </CustomDialog>
+
+      <ConfirmDialog
+        confirmLabel="Reset Password"
+        description="Generate a new temporary password for this user."
+        isLoading={isResetting}
+        onClose={() => {
+          if (!isResetting) {
+            setResetTarget(null);
+          }
+        }}
+        onConfirm={async () => {
+          if (!resetTarget) {
+            return;
+          }
+
+          setIsResetting(true);
+
+          try {
+            const response = await resetUserPassword(resetTarget.id);
+            setResetTarget(null);
+            setResetResult(response);
+          } catch (requestError) {
+            setError(
+              requestError instanceof ApiClientError
+                ? requestError.message
+                : "Unable to reset password right now."
+            );
+            setResetTarget(null);
+          } finally {
+            setIsResetting(false);
+          }
+        }}
+        open={Boolean(resetTarget)}
+        title="Reset Password"
+        content={
+          <Typography color="text.secondary" variant="body2">
+            Reset password for <strong>{resetTarget?.email}</strong>?
+          </Typography>
+        }
+      />
+
+      <CustomDialog
+        actions={
+          <Button onClick={() => setResetResult(null)} variant="contained">
+            Close
+          </Button>
+        }
+        description="Copy this temporary password now. It will not be shown again."
+        onClose={() => setResetResult(null)}
+        open={Boolean(resetResult)}
+        title="Temporary Password"
+      >
+        {resetResult ? (
+          <Stack spacing={2}>
+            <Alert severity="success">
+              Password was reset for <strong>{resetResult.email}</strong>.
+            </Alert>
+
+            <Paper sx={{ p: 2 }} variant="outlined">
+              <Stack spacing={0.5}>
+                <Typography color="text.secondary" variant="body2">
+                  Temporary Password
+                </Typography>
+                <Typography sx={{ fontFamily: "monospace", fontSize: 18, fontWeight: 700 }} variant="h6">
+                  {resetResult.temporaryPassword}
+                </Typography>
+              </Stack>
+            </Paper>
+          </Stack>
+        ) : null}
       </CustomDialog>
     </Stack>
   );

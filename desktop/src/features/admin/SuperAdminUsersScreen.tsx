@@ -26,8 +26,8 @@ import {
 } from "@mui/material";
 import { emptyRows, useTable } from "../../components/table";
 import { ApiClientError } from "../../lib/api/DesktopApiClient";
-import type { CompanySummary, CreatedPlatformUserResponse, PagedResponse, UserSummary } from "../../lib/api/types";
-import { CustomDialog } from "../../components";
+import type { CompanySummary, CreatedPlatformUserResponse, PagedResponse, PasswordResetResponse, UserSummary } from "../../lib/api/types";
+import { ConfirmDialog, CustomDialog } from "../../components";
 import { useAuth } from "../auth/AuthProvider";
 import { SuperAdminUserFormDialog } from "./SuperAdminUserFormDialog";
 
@@ -36,7 +36,8 @@ const headCells = [
   { id: "name", label: "Name", minWidth: 200, sortable: false, align: undefined },
   { id: "companyName", label: "Company", minWidth: 220, sortable: false, align: undefined },
   { id: "roles", label: "Roles", minWidth: 180, sortable: false, align: undefined },
-  { id: "status", label: "Status", minWidth: 120, sortable: true, align: undefined }
+  { id: "status", label: "Status", minWidth: 120, sortable: true, align: undefined },
+  { id: "actions", label: "Actions", minWidth: 160, sortable: false, align: undefined }
 ] as const;
 
 const emptyUserPage: PagedResponse<UserSummary> = {
@@ -56,7 +57,7 @@ function toSortValue(orderBy: string, order: "asc" | "desc"): string {
 }
 
 export function SuperAdminUsersScreen() {
-  const { createAdminUser, getAdminCompanies, getAdminUsers } = useAuth();
+  const { createAdminUser, getAdminCompanies, getAdminUsers, resetAdminUserPassword } = useAuth();
   const table = useTable({
     defaultOrderBy: "email",
     defaultOrder: "asc",
@@ -71,6 +72,9 @@ export function SuperAdminUsersScreen() {
   const [error, setError] = useState<string | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [createdUser, setCreatedUser] = useState<CreatedPlatformUserResponse | null>(null);
+  const [resetTarget, setResetTarget] = useState<UserSummary | null>(null);
+  const [isResetting, setIsResetting] = useState(false);
+  const [resetResult, setResetResult] = useState<PasswordResetResponse | null>(null);
 
   const rows = pageData.items;
   const totalElements = pageData.totalElements;
@@ -283,6 +287,18 @@ export function SuperAdminUsersScreen() {
                               variant={user.status === "ACTIVE" ? "filled" : "outlined"}
                             />
                           </TableCell>
+                          <TableCell>
+                            <Button
+                              onClick={() => {
+                                blurActiveElement();
+                                setResetTarget(user);
+                              }}
+                              size="small"
+                              variant="text"
+                            >
+                              Reset Password
+                            </Button>
+                          </TableCell>
                         </TableRow>
                       ))
                     : null}
@@ -347,6 +363,75 @@ export function SuperAdminUsersScreen() {
               </Typography>
               <Paper sx={{ p: 2, typography: "h6" }} variant="outlined">
                 {createdUser.temporaryPassword}
+              </Paper>
+            </Box>
+          </Stack>
+        ) : null}
+      </CustomDialog>
+
+      <ConfirmDialog
+        confirmLabel="Reset Password"
+        description="Generate a new temporary password for this user."
+        isLoading={isResetting}
+        onClose={() => {
+          if (!isResetting) {
+            setResetTarget(null);
+          }
+        }}
+        onConfirm={async () => {
+          if (!resetTarget) {
+            return;
+          }
+
+          setIsResetting(true);
+
+          try {
+            const response = await resetAdminUserPassword(resetTarget.id);
+            setResetTarget(null);
+            setResetResult(response);
+          } catch (requestError) {
+            setError(
+              requestError instanceof ApiClientError
+                ? requestError.message
+                : "Unable to reset password right now."
+            );
+            setResetTarget(null);
+          } finally {
+            setIsResetting(false);
+          }
+        }}
+        open={Boolean(resetTarget)}
+        title="Reset Password"
+        content={
+          <Typography color="text.secondary" variant="body2">
+            Reset password for <strong>{resetTarget?.email}</strong>?
+          </Typography>
+        }
+      />
+
+      <CustomDialog
+        actions={
+          <Button onClick={() => setResetResult(null)} variant="contained">
+            Close
+          </Button>
+        }
+        description="This password is shown once. Deliver it to the user through your internal onboarding process."
+        onClose={() => setResetResult(null)}
+        open={Boolean(resetResult)}
+        size="sm"
+        title="Temporary Password"
+      >
+        {resetResult ? (
+          <Stack spacing={2}>
+            <Alert severity="success">
+              Password was reset for <strong>{resetResult.email}</strong>.
+            </Alert>
+            <Box>
+              <Typography color="text.secondary" gutterBottom variant="body2">
+                Temporary Password
+              </Typography>
+              <Paper sx={{ p: 2, typography: "h6" }} variant="outlined">
+                {resetResult.temporaryPassword}
               </Paper>
             </Box>
           </Stack>
